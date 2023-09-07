@@ -11,7 +11,7 @@ class url_is_stable:
     """
     Selenium wait condition that waits for the URL to be stable and the page to be ready.
     """
-    def __init__(self, duration: float = 1.0):
+    def __init__(self, duration: float = 2.0):
         self._duration = duration
         # This is the last URL that we saw
         self._last_url = None
@@ -42,7 +42,7 @@ class ZenithKeywords:
         self._driver = None
 
     @keyword
-    def open_browser(self, browser: str = "firefox", headless: bool = False):
+    def open_browser(self, browser: str = "firefox", headless: bool = True):
         """
         Opens the specified browser.
         """
