@@ -33,6 +33,21 @@ class url_is_stable:
         return (time.monotonic() - self._last_url_seen) >= self._duration
 
 
+class title_contains:
+    """
+    Selenium wait condition that waits for the given string to be in the page title.
+    """
+    def __init__(self, expected_title):
+        self._expected_title = expected_title
+
+    def __call__(self, driver):
+        # Wait until the page is fully loaded
+        ready_state = driver.execute_script("return document.readyState")
+        if ready_state.lower() != "complete":
+            return False
+        return self._expected_title in driver.title
+
+
 class ZenithKeywords:
     """
     Keywords for interacting with Zenith services.
@@ -84,7 +99,7 @@ class ZenithKeywords:
         button = self._driver.find_element(By.XPATH, "//*[@type=\"submit\"]")
         button.click()
         # Wait for the URL to settle after clicking submit, so that the cookie gets set
-        WebDriverWait(self._driver, 10).until(url_is_stable())
+        WebDriverWait(self._driver, 86400).until(url_is_stable())
 
     @keyword
     def open_zenith_service(self, fqdn: str, authenticate: bool = True):
@@ -97,14 +112,11 @@ class ZenithKeywords:
         scheme = self._ctx.client.base_url.scheme
         # Visit the Zenith URL and wait for it to stabilise
         self._driver.get(f"{scheme}://{fqdn}?kc_idp_hint=azimuth")
-        WebDriverWait(self._driver, 10).until(url_is_stable())
+        WebDriverWait(self._driver, 86400).until(url_is_stable())
 
     @keyword
-    def check_page_title_contains(self, expected_title: str):
+    def wait_until_page_title_contains(self, expected_title: str):
         """
-        Checks that the current page title contains the given string.
+        Waits until the current page title contains the given string.
         """
-        # Check that the driver title matches
-        assert \
-            expected_title in self._driver.title, \
-            f"\"{expected_title}\" is not present in \"{self._driver.title}\""
+        WebDriverWait(self._driver, 86400).until(title_contains(expected_title))

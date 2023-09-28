@@ -4,6 +4,23 @@ import typing as t
 import azimuth_sdk
 
 
+def wait_for_resource(
+    resource,
+    id: str,
+    predicate: t.Callable[[t.Dict[str, t.Any]], bool],
+    interval: int
+) -> t.Dict[str, t.Any]:
+    """
+    Waits for the specified predicate to become True for the instance with the given ID.
+    """
+    while True:
+        instance = resource.fetch(id)
+        if predicate(instance):
+            return instance
+        else:
+            time.sleep(interval)
+
+
 def wait_for_resource_property(
     resource,
     id: str,
@@ -11,22 +28,21 @@ def wait_for_resource_property(
     target_value: t.Any,
     working_values: t.Collection[t.Any],
     interval: int
-):
+) -> t.Dict[str, t.Any]:
     """
     Waits for the specified property on the instance with the given ID to reach a target
     value. It will only continue while the property is in the working values.
     """
-    while True:
-        instance = resource.fetch(id)
+    def predicate(instance):
         property_value = getattr(instance, property)
-        if property_value in working_values:
-            time.sleep(interval)
-            continue
-        elif property_value == target_value:
-            return instance
+        if property_value == target_value:
+            return True
+        elif property_value in working_values:
+            return False
         else:
             raise AssertionError(f"unexpected {property} - {property_value}")
-            
+    return wait_for_resource(resource, id, predicate, interval)
+
 
 def delete_resource(resource, id: str, interval: int):
     """

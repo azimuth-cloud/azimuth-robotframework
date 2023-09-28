@@ -62,7 +62,7 @@ class SonobuoyMode(enum.Enum):
 
 class KubernetesClusterKeywords:
     """
-    Keywords for interacting with clusters.
+    Keywords for interacting with Kubernetes clusters.
     """
     def __init__(self, ctx):
         self._ctx = ctx
@@ -263,8 +263,6 @@ class KubernetesClusterKeywords:
     ) -> t.Dict[str, t.Any]:
         """
         Waits for the specified cluster to reach the target status before returning it.
-
-        If the cluster has not reached that state within the timeout, the keyword fails.
         """
         return util.wait_for_resource_property(
             self._resource,
@@ -356,7 +354,7 @@ class KubernetesClusterKeywords:
                 )
                 if (
                     retrieve_proc.returncode == 0 or
-                    "unexpected EOF" in retrieve_proc.stderr
+                    "unexpected EOF" not in retrieve_proc.stderr.decode()
                 ):
                     break
             # Even if the run and/or retrieve failed, we delete the run

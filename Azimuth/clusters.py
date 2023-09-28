@@ -72,8 +72,6 @@ class ClusterKeywords:
     ) -> t.Dict[str, t.Any]:
         """
         Waits for the specified cluster to reach the target status before returning it.
-
-        If the cluster has not reached that state within the timeout, the keyword fails.
         """
         return util.wait_for_resource_property(
             self._resource,

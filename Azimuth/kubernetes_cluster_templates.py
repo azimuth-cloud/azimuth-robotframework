@@ -83,9 +83,5 @@ class KubernetesClusterTemplateKeywords:
             latest_version = current_version
             latest_template = template
         if not latest_template:
-            raise ValueError(
-                f"No template matching tag(s) - {','.join(tags)}"
-                if tags
-                else "No templates available"
-            )
+            raise ValueError("No template matching conditions")
         return latest_template
