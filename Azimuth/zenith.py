@@ -1,5 +1,7 @@
 import time
 
+import httpx
+
 from robot.api.deco import keyword
 
 from selenium import webdriver
@@ -22,7 +24,7 @@ class url_is_stable:
         current_url = driver.current_url
         # If the page is not fully loaded, we are done
         ready_state = driver.execute_script("return document.readyState")
-        if ready_state.lower() != "complete":
+        if not ready_state or ready_state.lower() != "complete":
             return False
         # If the URL has changed, then it is not stable
         if not self._last_url or self._last_url != current_url:
@@ -43,7 +45,7 @@ class title_contains:
     def __call__(self, driver):
         # Wait until the page is fully loaded
         ready_state = driver.execute_script("return document.readyState")
-        if ready_state.lower() != "complete":
+        if not ready_state or ready_state.lower() != "complete":
             return False
         return self._expected_title in driver.title
 
@@ -57,7 +59,7 @@ class ZenithKeywords:
         self._driver = None
 
     @keyword
-    def open_browser(self, browser: str = "firefox", headless: bool = True):
+    def open_browser(self, browser: str = "firefox"):
         """
         Opens the specified browser.
         """
@@ -65,9 +67,7 @@ class ZenithKeywords:
             self.close_browser()
 
         if browser == "firefox":
-            options = webdriver.FirefoxOptions()
-            options.headless = headless
-            self._driver = webdriver.Firefox(options = options)
+            self._driver = webdriver.Firefox()
         else:
             raise AssertionError(f"browser is not supported - {browser}")
 
@@ -110,8 +110,19 @@ class ZenithKeywords:
             self.authenticate_browser()
         # Use the scheme from the Azimuth base URL
         scheme = self._ctx.client.base_url.scheme
+        zenith_url = f"{scheme}://{fqdn}?kc_idp_hint=azimuth"
+        # Wait for the Zenith URL to return something other than a 404, 502 or 503
+        # These statuses could occur while the Zenith tunnel is establishing
+        while True:
+            response = httpx.get(zenith_url)
+            if response.status_code < 400:
+                break
+            elif response.status_code in [404, 502, 503]:
+                continue
+            else:
+                response.raise_for_status()
         # Visit the Zenith URL and wait for it to stabilise
-        self._driver.get(f"{scheme}://{fqdn}?kc_idp_hint=azimuth")
+        self._driver.get(zenith_url)
         WebDriverWait(self._driver, 86400).until(url_is_stable())
 
     @keyword

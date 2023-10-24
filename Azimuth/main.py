@@ -8,6 +8,7 @@ from azimuth_sdk import Configuration, SyncClient
 
 from .cluster_types import ClusterTypeKeywords
 from .clusters import ClusterKeywords
+from .external_ips import ExternalIpKeywords
 from .kubernetes_app_templates import KubernetesAppTemplateKeywords
 from .kubernetes_apps import KubernetesAppKeywords
 from .kubernetes_cluster_templates import KubernetesClusterTemplateKeywords
@@ -30,6 +31,7 @@ class Azimuth(DynamicCore):
         super().__init__([
             ClusterTypeKeywords(self),
             ClusterKeywords(self),
+            ExternalIpKeywords(self),
             KubernetesAppTemplateKeywords(self),
             KubernetesAppKeywords(self),
             KubernetesClusterTemplateKeywords(self),

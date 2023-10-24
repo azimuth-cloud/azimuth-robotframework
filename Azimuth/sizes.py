@@ -37,3 +37,32 @@ class SizeKeywords:
             return next(c for c in self._resource.list() if c.name == name)
         except StopIteration:
             raise ValueError(f"no size with name '{name}'")
+
+    @keyword
+    def find_smallest_size_with_resources(
+        self,
+        *,
+        min_cpus: int = 0,
+        min_ram: int = 0,
+        min_disk: int = 0,
+        min_ephemeral_disk: int = 0,
+        sort_by: str = "ram,cpus,disk,ephemeral_disk"
+    ) -> t.Dict[str, t.Any]:
+        """
+        Finds the smallest size that fulfils the specified resource requirements.
+        """
+        candidates = (
+            size
+            for size in self._resource.list()
+            if (
+                size.cpus >= min_cpus and
+                size.ram >= min_ram and
+                size.disk >= min_disk and
+                size.ephemeral_disk >= min_ephemeral_disk
+            )
+        )
+        key_func = lambda size: tuple(getattr(size, attr) for attr in sort_by.split(","))
+        try:
+            return next(iter(sorted(candidates, key = key_func)))
+        except StopIteration:
+            raise ValueError("no available sizes fulfilling resource requirements")

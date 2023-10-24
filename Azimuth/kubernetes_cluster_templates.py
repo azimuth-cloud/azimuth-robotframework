@@ -20,7 +20,7 @@ class KubernetesClusterTemplateKeywords:
     def list_kubernetes_cluster_templates(
         self,
         *,
-        tags: t.Optional[t.List[str]],
+        tags: t.Optional[t.List[str]] = None,
         include_deprecated: bool = True
     ) -> t.List[t.Dict[str, t.Any]]:
         """
@@ -30,7 +30,7 @@ class KubernetesClusterTemplateKeywords:
             template
             for template in self._resource.list()
             if (
-                set(tags).issubset(template.tags) and
+                set(tags or []).issubset(template.tags) and
                 (include_deprecated or not template.deprecated)
             )
         )
@@ -57,22 +57,20 @@ class KubernetesClusterTemplateKeywords:
         self,
         *,
         constraints: str = ">=0.0.0",
-        tags: t.Optional[t.List[str]],
+        tags: t.Optional[t.List[str]] = None,
         include_deprecated: bool = False
     ) -> t.Dict[str, t.Any]:
         """
-        Finds the Kubernetes template with the most recent version that matches the given tags.
+        Finds the Kubernetes template with the most recent version that matches the constraints.
         """
+        templates = self.list_kubernetes_cluster_templates(
+            tags = tags,
+            include_deprecated = include_deprecated
+        )
         version_range = easysemver.Range(constraints)
         latest_version = None
         latest_template = None
-        for template in self._resource.list():
-            # If the template is deprecated, skip it unless explicitly included
-            if not include_deprecated and template.deprecated:
-                continue
-            # All the given tags must be in the template tags
-            if not set(tags).issubset(template.tags):
-                continue
+        for template in templates:
             current_version = easysemver.Version(template.kubernetes_version)
             # The version must match the constraints
             if current_version not in version_range:
@@ -83,5 +81,5 @@ class KubernetesClusterTemplateKeywords:
             latest_version = current_version
             latest_template = template
         if not latest_template:
-            raise ValueError("No template matching conditions")
+            raise ValueError("no template matching conditions")
         return latest_template
