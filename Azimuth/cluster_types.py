@@ -58,9 +58,11 @@ class ClusterTypeKeywords:
         # We sort by RAM, then CPUs, then disk to find the smallest
         options = param.get("options", {})
         try:
-            return SizeKeywords(self._ctx).find_smallest_size_with_resources(**options)
+            size = SizeKeywords(self._ctx).find_smallest_size_with_resources(**options)
         except ValueError:
             return None
+        else:
+            return size.id
 
     def _guess_ip(self, param):
         return ExternalIpKeywords(self._ctx).find_free_or_allocate_external_ip().id
