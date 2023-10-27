@@ -91,6 +91,4 @@ class ClusterTypeKeywords:
             # Emit a warning if we weren't able to make a guess
             if guess is not None:
                 params[name] = guess
-            else:
-                logger.warn(f"unable to make a guess for param '{name}'")
         return params
