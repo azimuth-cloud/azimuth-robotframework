@@ -132,7 +132,7 @@ class ZenithKeywords:
         while True:
             try:
                 response = httpx.get(zenith_url)
-            except httpx.TimeoutException:
+            except httpx.TransportError:
                 # We want to retry these exceptions
                 pass
             if response.status_code < 400:
