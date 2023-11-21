@@ -13,7 +13,7 @@ class url_is_stable:
     """
     Selenium wait condition that waits for the URL to be stable and the page to be ready.
     """
-    def __init__(self, duration: float = 2.0):
+    def __init__(self, duration: float = 5.0):
         self._duration = duration
         # This is the last URL that we saw
         self._last_url = None
@@ -33,6 +33,19 @@ class url_is_stable:
             return False
         # Check if the last time the URL changed is long enough ago
         return (time.monotonic() - self._last_url_seen) >= self._duration
+
+
+def tenancies_loaded(driver):
+    """
+    Selenium wait condition that waits for the tenancies to load on the tenancies page.
+    """
+    # Wait until the page is fully loaded
+    ready_state = driver.execute_script("return document.readyState")
+    if not ready_state or ready_state.lower() != "complete":
+        return False
+    # Check if there is at least one tenancy list item
+    elems = driver.find_elements(By.CSS_SELECTOR, ".card > .list-group > a")
+    return len(elems) > 0
 
 
 class title_contains:
@@ -98,8 +111,11 @@ class ZenithKeywords:
         # Click the submit button
         button = self._driver.find_element(By.XPATH, "//*[@type=\"submit\"]")
         button.click()
-        # Wait for the URL to settle after clicking submit, so that the cookie gets set
+        # Wait for the URL to settle and the tenancies to load after clicking submit
+        # This ensures that the authentication cookie gets set for the next step
         WebDriverWait(self._driver, 86400).until(url_is_stable())
+        # Wait for the tenancies to load
+        WebDriverWait(self._driver, 86400).until(tenancies_loaded)
 
     @keyword
     def open_zenith_service(self, fqdn: str, authenticate: bool = True):
@@ -114,13 +130,18 @@ class ZenithKeywords:
         # Wait for the Zenith URL to return something other than a 404, 502 or 503
         # These statuses could occur while the Zenith tunnel is establishing
         while True:
-            response = httpx.get(zenith_url)
+            try:
+                response = httpx.get(zenith_url)
+            except httpx.TimeoutException:
+                # We want to retry these exceptions
+                pass
             if response.status_code < 400:
+                # Not an error - we can exit!
                 break
-            elif response.status_code in [404, 502, 503]:
-                continue
-            else:
+            elif response.status_code not in [404, 502, 503, 504]:
+                # Not an error we expect to see during Zenith service startup - fail
                 response.raise_for_status()
+            time.sleep(1)
         # Visit the Zenith URL and wait for it to stabilise
         self._driver.get(zenith_url)
         WebDriverWait(self._driver, 86400).until(url_is_stable())
