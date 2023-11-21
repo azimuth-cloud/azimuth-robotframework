@@ -133,12 +133,13 @@ class ZenithKeywords:
             try:
                 response = httpx.get(zenith_url)
             except httpx.TimeoutException:
-                continue
+                # We want to retry these exceptions
+                pass
             if response.status_code < 400:
+                # Not an error - we can exit!
                 break
-            elif response.status_code in [404, 502, 503, 504]:
-                continue
-            else:
+            elif response.status_code not in [404, 502, 503, 504]:
+                # Not an error we expect to see during Zenith service startup - fail
                 response.raise_for_status()
             time.sleep(1)
         # Visit the Zenith URL and wait for it to stabilise
