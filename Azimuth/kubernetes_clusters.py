@@ -285,20 +285,28 @@ class KubernetesClusterKeywords:
         """
         Returns the Zenith FQDN for the specified cluster service.
         """
+        return self.wait_for_kubernetes_cluster_service_url(cluster["id"], name)
+
+    @keyword
+    def wait_for_kubernetes_cluster_service_url(self, id: str, name: str, interval: int = 15) -> str:
+        """
+        Returns the Zenith FQDN for the specified cluster service.
+
+        Because the Zenith operator is asynchronous, we wait to see if the services appear.
+        """
         # Allow some shortcut names
         names = {name}
         if name in {"dashboard", "kubernetes-dashboard"}:
             names.add("kubernetes-dashboard-client")
         if name == "monitoring":
             names.add("monitoring-system-kube-prometheus-stack-client")
-        try:
-            return next(
-                service["fqdn"]
-                for service in cluster["services"]
-                if service["name"] in names
-            )
-        except StopIteration:
-            raise ValueError(f"no such service - {name}")
+        cluster = util.wait_for_resource(
+            self._resource,
+            id,
+            lambda cluster: any(s["name"] in names for s in cluster["services"]),
+            interval
+        )
+        return next(s["fqdn"] for s in cluster["services"] if s["name"] in names)
 
     @contextlib.contextmanager
     def _kubeconfig_for_cluster(self, id: str):
