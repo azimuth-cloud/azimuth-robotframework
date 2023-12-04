@@ -127,7 +127,7 @@ class ZenithKeywords:
         # Use the scheme from the Azimuth base URL
         scheme = self._ctx.client.base_url.scheme
         zenith_url = f"{scheme}://{fqdn}?kc_idp_hint=azimuth"
-        # Wait for the Zenith URL to return something other than a 404, 502 or 503
+        # Wait for the Zenith URL to return something other than a 404, 500, 502, 503 or 504
         # These statuses could occur while the Zenith tunnel is establishing
         while True:
             try:
@@ -139,7 +139,7 @@ class ZenithKeywords:
                 if response.status_code < 400:
                     # Not an error - we can exit!
                     break
-                elif response.status_code not in [404, 502, 503, 504]:
+                elif response.status_code not in [404, 500, 502, 503, 504]:
                     # Not an error we expect to see during Zenith service startup - fail
                     response.raise_for_status()
             time.sleep(1)
