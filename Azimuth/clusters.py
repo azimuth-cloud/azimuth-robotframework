@@ -79,6 +79,7 @@ class ClusterKeywords:
             "status",
             target_status,
             {"CONFIGURING", "DELETING"},
+            "error_message",
             interval
         )
 

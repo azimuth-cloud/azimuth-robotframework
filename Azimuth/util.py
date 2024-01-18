@@ -27,7 +27,8 @@ def wait_for_resource_property(
     property: str,
     target_value: t.Any,
     working_values: t.Collection[t.Any],
-    interval: int
+    error_message_property: str,
+    interval: int,
 ) -> t.Dict[str, t.Any]:
     """
     Waits for the specified property on the instance with the given ID to reach a target
@@ -40,7 +41,11 @@ def wait_for_resource_property(
         elif property_value in working_values:
             return False
         else:
-            raise AssertionError(f"unexpected {property} - {property_value}")
+            message = f"unexpected {property} - {property_value}"
+            error_message = getattr(instance, error_message_property, None)
+            if error_message:
+                message = f"{message} - {error_message}"
+            raise AssertionError(message)
     return wait_for_resource(resource, id, predicate, interval)
 
 
