@@ -81,6 +81,7 @@ class KubernetesAppKeywords:
             "status",
             target_status,
             {"Pending", "Preparing", "Installing", "Upgrading", "Uninstalling", "Unknown"},
+            "error_message",
             interval
         )
 
