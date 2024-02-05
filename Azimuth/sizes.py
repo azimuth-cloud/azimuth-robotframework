@@ -46,7 +46,8 @@ class SizeKeywords:
         min_ram: int = 0,
         min_disk: int = 0,
         min_ephemeral_disk: int = 0,
-        sort_by: str = "ram,cpus,disk,ephemeral_disk"
+        sort_by: str = "ram,cpus,disk,ephemeral_disk",
+        **kwargs
     ) -> t.Dict[str, t.Any]:
         """
         Finds the smallest size that fulfils the specified resource requirements.
