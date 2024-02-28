@@ -24,10 +24,12 @@ class Azimuth(DynamicCore):
     # This ensures that one instance of the library is shared everywhere
     # This is important to get the client sharing working correctly
     ROBOT_LIBRARY_SCOPE = "GLOBAL"
+    ROBOT_LISTENER_API_VERSION = 3
 
     def __init__(self):
         # The Azimuth client instance
         self.client: SyncClient = None
+        self.ROBOT_LIBRARY_LISTENER = self
         super().__init__([
             ClusterTypeKeywords(self),
             ClusterKeywords(self),
@@ -140,3 +142,6 @@ class Azimuth(DynamicCore):
         suffix = "".join(secrets.choice(suffix_chars) for _ in range(suffix_length))
         return f"{prefix}-{suffix}"
 
+    def _end_test(self, name, attrs):
+        mins, secs = divmod(attrs['elapsedtime'] / 1000, 60)
+        print(f"{name}: status {attrs['status']}, elapsed time: {mins:0>1.0f}m {secs:.0f}s")
