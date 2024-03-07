@@ -142,6 +142,6 @@ class Azimuth(DynamicCore):
         suffix = "".join(secrets.choice(suffix_chars) for _ in range(suffix_length))
         return f"{prefix}-{suffix}"
 
-    def _end_test(self, name, attrs):
-        mins, secs = divmod(attrs['elapsedtime'] / 1000, 60)
-        print(f"{name}: status {attrs['status']}, elapsed time: {mins:0>1.0f}m {secs:.0f}s")
+    def _end_test(self, data, result):
+        mins, secs = divmod(result.elapsedtime / 1000, 60)
+        print(f"{result.name}: status {result.status}, elapsed time: {mins:0>1.0f}m {secs:.0f}s")
