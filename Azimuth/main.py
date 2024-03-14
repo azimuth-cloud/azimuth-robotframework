@@ -144,4 +144,4 @@ class Azimuth(DynamicCore):
 
     def _end_test(self, data, result):
         mins, secs = divmod(result.elapsedtime / 1000, 60)
-        print(f"{result.name}: status {result.status}, elapsed time: {mins:0>1.0f}m {secs:.0f}s")
+        print(f"elapsed time: {mins:0>1.0f}m {secs:.0f}s")
