@@ -39,7 +39,7 @@ class KubernetesAppTemplateKeywords:
         Returns the latest version for the Kubernetes app template.
         """
         try:
-            return next(iter(template.versions))
+            return next(iter(template["versions"]))
         except StopIteration:
             raise AssertionError(f"no versions for Kubernetes app template '{template.id}'")
         
