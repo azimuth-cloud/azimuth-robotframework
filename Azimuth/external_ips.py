@@ -46,7 +46,12 @@ class ExternalIpKeywords:
         If no such IP exists, an exception is raised.
         """
         try:
-            return next(ip for ip in self._resource.list() if ip.machine is None)
+            return next(
+                ip
+                for ip in self._resource.list()
+                # Use the available flag if present, falling back to using the machine
+                if ip.get("available", ip.machine is None)
+            )
         except StopIteration:
             raise ValueError("unable to find an unassigned external IP address")
 
