@@ -57,6 +57,13 @@ class ClusterKeywords:
         })
 
     @keyword
+    def patch_cluster(self, id: str) -> t.Dict[str, t.Any]:
+        """
+        Patches the specified cluster.
+        """
+        return self._resource.action(id, "patch")
+
+    @keyword
     def delete_cluster(self, id: str, interval: int = 15):
         """
         Deletes the specified cluster and waits for it to be deleted.
