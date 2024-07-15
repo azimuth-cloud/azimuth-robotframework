@@ -83,3 +83,21 @@ class KubernetesClusterTemplateKeywords:
         if not latest_template:
             raise ValueError("no template matching conditions")
         return latest_template
+
+    @keyword
+    def find_kubernetes_cluster_template_for_upgrade(self, id: str) -> t.Dict[str, t.Any]:
+        """
+        Given the ID of an existing template, find the latest template that a cluster using
+        that template can be upgraded to.
+        """
+        template = self.fetch_kubernetes_cluster_template(id)
+        # The Kubernetes version for the new template must be the same or newer than the
+        # given template and no more than one minor version newer than the given template
+        # We also restrict the search to non-deprecated templates with the same tags
+        current_version = easysemver.Version(template.kubernetes_version)
+        upper_bound = current_version.bump_minor().bump_minor()
+        return self.find_latest_kubernetes_cluster_template(
+            constraints = f">={current_version},<{upper_bound}",
+            tags = template.get("tags", []),
+            include_deprecated = False
+        )

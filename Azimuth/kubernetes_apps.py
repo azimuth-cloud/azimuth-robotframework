@@ -59,6 +59,18 @@ class KubernetesAppKeywords:
         })
 
     @keyword
+    def update_kubernetes_app(
+        self,
+        id: str,
+        version: t.Dict[str, t.Any],
+        values: t.Dict[str, t.Any]
+    ) -> t.Dict[str, t.Any]:
+        """
+        Update the specified Kubernetes app with the given version and values.
+        """
+        return self._resource.patch(id, {"version": version["name"], "values": values})
+
+    @keyword
     def delete_kubernetes_app(self, id: str, interval: int = 15):
         """
         Deletes the specified Kubernetes app and waits for it to be deleted.

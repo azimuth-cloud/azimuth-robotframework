@@ -240,6 +240,13 @@ class KubernetesClusterKeywords:
         return self._resource.create(dataclasses.asdict(config))
 
     @keyword
+    def upgrade_kubernetes_cluster(self, id: str, template_id: str) -> t.Dict[str, t.Any]:
+        """
+        Upgrades the specified Kubernetes cluster to a new template.
+        """
+        return self._resource.patch(id, {"template": template_id})
+
+    @keyword
     def delete_kubernetes_cluster(self, id: str, interval: int = 15):
         """
         Deletes the specified Kubernetes cluster and waits for it to be deleted.
