@@ -276,7 +276,7 @@ class KubernetesClusterKeywords:
             id,
             "status",
             target_status,
-            {"Reconciling", "Upgrading", "Deleting", "Unhealthy", "Unknown"},
+            {"Pending", "Reconciling", "Upgrading", "Deleting", "Unhealthy", "Unknown"},
             "error_message",
             interval
         )
