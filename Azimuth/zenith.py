@@ -131,7 +131,7 @@ class ZenithKeywords:
         # These statuses could occur while the Zenith tunnel is establishing
         while True:
             try:
-                response = httpx.get(zenith_url)
+                response = httpx.get(zenith_url, follow_redirects = True)
             except httpx.TransportError:
                 # We want to retry these exceptions
                 pass
