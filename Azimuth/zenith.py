@@ -128,10 +128,16 @@ class ZenithKeywords:
         scheme = self._ctx.client.base_url.scheme
         zenith_url = f"{scheme}://{fqdn}?kc_idp_hint=azimuth"
         # Wait for the Zenith URL to return something other than a 404, 500, 502, 503 or 504
-        # These statuses could occur while the Zenith tunnel is establishing
+        # These statuses could occur while the Zenith tunnel is establishing or while the
+        # proxied service is starting
+        # Use the cookies from the browser session so that the requests are authenticated
         while True:
             try:
-                response = httpx.get(zenith_url, follow_redirects = True)
+                response = httpx.get(
+                    zenith_url,
+                    follow_redirects = True,
+                    cookies = { c["name"]: c["value"] for c in self._driver.get_cookies() }
+                )
             except httpx.TransportError:
                 # We want to retry these exceptions
                 pass
@@ -142,7 +148,7 @@ class ZenithKeywords:
                 elif response.status_code not in [404, 500, 502, 503, 504]:
                     # Not an error we expect to see during Zenith service startup - fail
                     response.raise_for_status()
-            time.sleep(1)
+            time.sleep(5)
         # Visit the Zenith URL and wait for it to stabilise
         self._driver.get(zenith_url)
         WebDriverWait(self._driver, 86400).until(url_is_stable())
