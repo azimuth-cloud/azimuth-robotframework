@@ -136,7 +136,8 @@ class ZenithKeywords:
                 response = httpx.get(
                     zenith_url,
                     follow_redirects = True,
-                    cookies = { c["name"]: c["value"] for c in self._driver.get_cookies() }
+                    cookies = { c["name"]: c["value"] for c in self._driver.get_cookies() },
+                    verify = scheme == "https"
                 )
             except httpx.TransportError:
                 # We want to retry these exceptions
