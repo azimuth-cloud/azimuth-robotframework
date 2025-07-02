@@ -2,9 +2,8 @@ import secrets
 import string
 import typing as t
 
-from robotlibcore import DynamicCore, keyword
-
 from azimuth_sdk import Configuration, SyncClient
+from robotlibcore import DynamicCore, keyword
 
 from .cluster_types import ClusterTypeKeywords
 from .clusters import ClusterKeywords
@@ -21,6 +20,7 @@ class Azimuth(DynamicCore):
     """
     Robot Framework library for testing Azimuth.
     """
+
     # This ensures that one instance of the library is shared everywhere
     # This is important to get the client sharing working correctly
     ROBOT_LIBRARY_SCOPE = "GLOBAL"
@@ -30,17 +30,19 @@ class Azimuth(DynamicCore):
         # The Azimuth client instance
         self.client: SyncClient = None
         self.ROBOT_LIBRARY_LISTENER = self
-        super().__init__([
-            ClusterTypeKeywords(self),
-            ClusterKeywords(self),
-            ExternalIpKeywords(self),
-            KubernetesAppTemplateKeywords(self),
-            KubernetesAppKeywords(self),
-            KubernetesClusterTemplateKeywords(self),
-            KubernetesClusterKeywords(self),
-            SizeKeywords(self),
-            ZenithKeywords(self),
-        ])
+        super().__init__(
+            [
+                ClusterTypeKeywords(self),
+                ClusterKeywords(self),
+                ExternalIpKeywords(self),
+                KubernetesAppTemplateKeywords(self),
+                KubernetesAppKeywords(self),
+                KubernetesClusterTemplateKeywords(self),
+                KubernetesClusterKeywords(self),
+                SizeKeywords(self),
+                ZenithKeywords(self),
+            ]
+        )
 
     def _create_client(self, config):
         # Clean up any old clients first
@@ -54,11 +56,11 @@ class Azimuth(DynamicCore):
         self,
         base_url: str,
         *,
-        auth_data: t.Dict[str, t.Any],
-        authenticator: t.Optional[str] = None,
-        authenticator_type: t.Optional[str] = None,
-        default_tenancy_id: t.Optional[str] = None,
-        **kwargs
+        auth_data: dict[str, t.Any],
+        authenticator: str | None = None,
+        authenticator_type: str | None = None,
+        default_tenancy_id: str | None = None,
+        **kwargs,
     ):
         """
         Creates an Azimuth SDK client using the given authentication.
@@ -66,11 +68,11 @@ class Azimuth(DynamicCore):
         self._create_client(
             Configuration.create(
                 base_url,
-                auth_data = auth_data,
-                authenticator = authenticator,
-                authenticator_type = authenticator_type,
-                default_tenancy_id = default_tenancy_id,
-                **kwargs
+                auth_data=auth_data,
+                authenticator=authenticator,
+                authenticator_type=authenticator_type,
+                default_tenancy_id=default_tenancy_id,
+                **kwargs,
             )
         )
 
@@ -81,8 +83,8 @@ class Azimuth(DynamicCore):
         path: str,
         cloud: str = "openstack",
         *,
-        default_tenancy_id: t.Optional[str] = None,
-        **kwargs
+        default_tenancy_id: str | None = None,
+        **kwargs,
     ):
         """
         Creates an Azimuth SDK client using the specified OpenStack clouds.yaml file.
@@ -91,28 +93,22 @@ class Azimuth(DynamicCore):
             Configuration.from_openstack_clouds_file(
                 base_url,
                 path,
-                cloud = cloud,
-                default_tenancy_id = default_tenancy_id,
-                **kwargs
+                cloud=cloud,
+                default_tenancy_id=default_tenancy_id,
+                **kwargs,
             )
         )
 
     @keyword
     def create_client_from_environment(
-        self,
-        base_url: str,
-        *,
-        default_tenancy_id: t.Optional[str] = None,
-        **kwargs
+        self, base_url: str, *, default_tenancy_id: str | None = None, **kwargs
     ):
         """
         Creates an Azimuth SDK client from the environment variables.
         """
         self._create_client(
             Configuration.from_environment(
-                base_url,
-                default_tenancy_id = default_tenancy_id,
-                **kwargs
+                base_url, default_tenancy_id=default_tenancy_id, **kwargs
             )
         )
 
@@ -134,7 +130,7 @@ class Azimuth(DynamicCore):
             self.client = None
 
     @keyword
-    def generate_name(self, prefix: str, suffix_length = 5, suffix_chars = None) -> str:
+    def generate_name(self, prefix: str, suffix_length=5, suffix_chars=None) -> str:
         """
         Given a prefix, generates a name with a random suffix.
         """

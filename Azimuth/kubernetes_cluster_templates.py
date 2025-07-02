@@ -1,14 +1,14 @@
 import typing as t
 
-from robot.api.deco import keyword
-
 import easysemver
+from robot.api.deco import keyword
 
 
 class KubernetesClusterTemplateKeywords:
     """
     Keywords for interacting with Kubernetes cluster templates.
     """
+
     def __init__(self, ctx):
         self._ctx = ctx
 
@@ -18,11 +18,8 @@ class KubernetesClusterTemplateKeywords:
 
     @keyword
     def list_kubernetes_cluster_templates(
-        self,
-        *,
-        tags: t.Optional[t.List[str]] = None,
-        include_deprecated: bool = True
-    ) -> t.List[t.Dict[str, t.Any]]:
+        self, *, tags: list[str] | None = None, include_deprecated: bool = True
+    ) -> list[dict[str, t.Any]]:
         """
         Lists available Kubernetes cluster templates using the active client.
         """
@@ -30,20 +27,20 @@ class KubernetesClusterTemplateKeywords:
             template
             for template in self._resource.list()
             if (
-                set(tags or []).issubset(template.tags) and
-                (include_deprecated or not template.deprecated)
+                set(tags or []).issubset(template.tags)
+                and (include_deprecated or not template.deprecated)
             )
         )
 
     @keyword
-    def fetch_kubernetes_cluster_template(self, id: str) -> t.Dict[str, t.Any]:
+    def fetch_kubernetes_cluster_template(self, id: str) -> dict[str, t.Any]:  # noqa: A002
         """
         Fetches a Kubernetes cluster template by id using the active client.
         """
         return self._resource.fetch(id)
 
     @keyword
-    def find_kubernetes_cluster_template_by_name(self, name: str) -> t.Dict[str, t.Any]:
+    def find_kubernetes_cluster_template_by_name(self, name: str) -> dict[str, t.Any]:
         """
         Finds a Kubernetes cluster template by name using the active client.
         """
@@ -57,15 +54,15 @@ class KubernetesClusterTemplateKeywords:
         self,
         *,
         constraints: str = ">=0.0.0",
-        tags: t.Optional[t.List[str]] = None,
-        include_deprecated: bool = False
-    ) -> t.Dict[str, t.Any]:
+        tags: list[str] | None = None,
+        include_deprecated: bool = False,
+    ) -> dict[str, t.Any]:
         """
-        Finds the Kubernetes template with the most recent version that matches the constraints.
+        Finds the Kubernetes template with the most recent version that matches the
+        constraints.
         """
         templates = self.list_kubernetes_cluster_templates(
-            tags = tags,
-            include_deprecated = include_deprecated
+            tags=tags, include_deprecated=include_deprecated
         )
         version_range = easysemver.Range(constraints)
         latest_version = None
@@ -85,19 +82,23 @@ class KubernetesClusterTemplateKeywords:
         return latest_template
 
     @keyword
-    def find_kubernetes_cluster_template_for_upgrade(self, id: str) -> t.Dict[str, t.Any]:
+    def find_kubernetes_cluster_template_for_upgrade(
+        self,
+        id: str,  # noqa: A002
+    ) -> dict[str, t.Any]:
         """
-        Given the ID of an existing template, find the latest template that a cluster using
-        that template can be upgraded to.
+        Given the ID of an existing template, find the latest template that a cluster
+        using that template can be upgraded to.
         """
         template = self.fetch_kubernetes_cluster_template(id)
         # The Kubernetes version for the new template must be the same or newer than the
-        # given template and no more than one minor version newer than the given template
+        # given template and no more than one minor version newer than the given
+        # template
         # We also restrict the search to non-deprecated templates with the same tags
         current_version = easysemver.Version(template.kubernetes_version)
         upper_bound = current_version.bump_minor().bump_minor()
         return self.find_latest_kubernetes_cluster_template(
-            constraints = f">={current_version},<{upper_bound}",
-            tags = template.get("tags", []),
-            include_deprecated = False
+            constraints=f">={current_version},<{upper_bound}",
+            tags=template.get("tags", []),
+            include_deprecated=False,
         )

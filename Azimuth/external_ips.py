@@ -7,6 +7,7 @@ class ExternalIpKeywords:
     """
     Keywords for interacting with external IPs.
     """
+
     def __init__(self, ctx):
         self._ctx = ctx
 
@@ -15,31 +16,33 @@ class ExternalIpKeywords:
         return self._ctx.client.external_ips()
 
     @keyword
-    def list_external_ips(self) -> t.List[t.Dict[str, t.Any]]:
+    def list_external_ips(self) -> list[dict[str, t.Any]]:
         """
         Lists available external IPs using the active client.
         """
         return list(self._resource.list())
 
     @keyword
-    def fetch_external_ip(self, id: str) -> t.Dict[str, t.Any]:
+    def fetch_external_ip(self, id: str) -> dict[str, t.Any]:  # noqa: A002
         """
         Fetches an external IP by id using the active client.
         """
         return self._resource.fetch(id)
 
     @keyword
-    def find_external_ip_by_address(self, ip_address: str) -> t.Dict[str, t.Any]:
+    def find_external_ip_by_address(self, ip_address: str) -> dict[str, t.Any]:
         """
         Finds an external IP by IP address using the active client.
         """
         try:
-            return next(ip for ip in self._resource.list() if ip.external_ip == ip_address)
+            return next(
+                ip for ip in self._resource.list() if ip.external_ip == ip_address
+            )
         except StopIteration:
             raise ValueError(f"no external IP with address '{ip_address}'")
 
     @keyword
-    def find_free_external_ip(self) -> t.Dict[str, t.Any]:
+    def find_free_external_ip(self) -> dict[str, t.Any]:
         """
         Searches for an external IP that is allocated but not assigned and returns it.
 
@@ -56,14 +59,14 @@ class ExternalIpKeywords:
             raise ValueError("unable to find an unassigned external IP address")
 
     @keyword
-    def allocate_external_ip(self) -> t.Dict[str, t.Any]:
+    def allocate_external_ip(self) -> dict[str, t.Any]:
         """
         Allocates a new external IP and returns it.
         """
         return self._resource.create({})
 
     @keyword
-    def find_free_or_allocate_external_ip(self) -> t.Dict[str, t.Any]:
+    def find_free_or_allocate_external_ip(self) -> dict[str, t.Any]:
         """
         Searches for an external IP that is allocated but not assigned and returns it.
 

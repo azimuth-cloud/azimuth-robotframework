@@ -1,18 +1,18 @@
 import time
 
 import httpx
-
 from robot.api.deco import keyword
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 
-class url_is_stable:
+class url_is_stable:  # noqa: N801
     """
-    Selenium wait condition that waits for the URL to be stable and the page to be ready.
+    Selenium wait condition that waits for the URL to be stable and the page to be
+    ready.
     """
+
     def __init__(self, duration: float = 5.0):
         self._duration = duration
         # This is the last URL that we saw
@@ -48,10 +48,11 @@ def tenancies_loaded(driver):
     return len(elems) > 0
 
 
-class title_contains:
+class title_contains:  # noqa: N801
     """
     Selenium wait condition that waits for the given string to be in the page title.
     """
+
     def __init__(self, expected_title):
         self._expected_title = expected_title
 
@@ -67,6 +68,7 @@ class ZenithKeywords:
     """
     Keywords for interacting with Zenith services.
     """
+
     def __init__(self, ctx):
         self._ctx = ctx
         self._driver = None
@@ -109,7 +111,7 @@ class ZenithKeywords:
             el.clear()
             el.send_keys(data)
         # Click the submit button
-        button = self._driver.find_element(By.XPATH, "//*[@type=\"submit\"]")
+        button = self._driver.find_element(By.XPATH, '//*[@type="submit"]')
         button.click()
         # Wait for the URL to settle and the tenancies to load after clicking submit
         # This ensures that the authentication cookie gets set for the next step
@@ -127,17 +129,19 @@ class ZenithKeywords:
         # Use the scheme from the Azimuth base URL
         scheme = self._ctx.client.base_url.scheme
         zenith_url = f"{scheme}://{fqdn}?kc_idp_hint=azimuth"
-        # Wait for the Zenith URL to return something other than a 404, 500, 502, 503 or 504
-        # These statuses could occur while the Zenith tunnel is establishing or while the
-        # proxied service is starting
-        # Use the cookies from the browser session so that the requests are authenticated
+        # Wait for the Zenith URL to return something other than a 404, 500, 502, 503 or
+        # 504
+        # These statuses could occur while the Zenith tunnel is establishing or while
+        # the proxied service is starting
+        # Use the cookies from the browser session so that the requests are
+        # authenticated
         while True:
             try:
                 response = httpx.get(
                     zenith_url,
-                    follow_redirects = True,
-                    cookies = { c["name"]: c["value"] for c in self._driver.get_cookies() },
-                    verify = scheme == "https"
+                    follow_redirects=True,
+                    cookies={c["name"]: c["value"] for c in self._driver.get_cookies()},
+                    verify=scheme == "https",
                 )
             except httpx.TransportError:
                 # We want to retry these exceptions

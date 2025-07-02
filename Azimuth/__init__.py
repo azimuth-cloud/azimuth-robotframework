@@ -1,1 +1,1 @@
-from .main import Azimuth
+from .main import Azimuth  # noqa: F401,N999
