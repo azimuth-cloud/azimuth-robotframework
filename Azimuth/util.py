@@ -6,10 +6,10 @@ import azimuth_sdk
 
 def wait_for_resource(
     resource,
-    id: str,
-    predicate: t.Callable[[t.Dict[str, t.Any]], bool],
-    interval: int
-) -> t.Dict[str, t.Any]:
+    id: str,  # noqa: A002
+    predicate: t.Callable[[dict[str, t.Any]], bool],
+    interval: int,
+) -> dict[str, t.Any]:
     """
     Waits for the specified predicate to become True for the instance with the given ID.
     """
@@ -23,17 +23,18 @@ def wait_for_resource(
 
 def wait_for_resource_property(
     resource,
-    id: str,
-    property: str,
+    id: str,  # noqa: A002
+    property: str,  # noqa: A002
     target_value: t.Any,
     working_values: t.Collection[t.Any],
     error_message_property: str,
     interval: int,
-) -> t.Dict[str, t.Any]:
+) -> dict[str, t.Any]:
     """
     Waits for the specified property on the instance with the given ID to reach a target
     value. It will only continue while the property is in the working values.
     """
+
     def predicate(instance):
         property_value = getattr(instance, property)
         if property_value == target_value:
@@ -46,10 +47,11 @@ def wait_for_resource_property(
             if error_message:
                 message = f"{message} - {error_message}"
             raise AssertionError(message)
+
     return wait_for_resource(resource, id, predicate, interval)
 
 
-def delete_resource(resource, id: str, interval: int):
+def delete_resource(resource, id: str, interval: int):  # noqa: A002
     """
     Deletes the instance with the specified ID and waits for it to be deleted.
     """

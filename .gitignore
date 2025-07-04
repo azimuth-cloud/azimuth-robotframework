@@ -6,3 +6,12 @@ clouds.yaml
 *.log
 *.html
 *.xml
+build
+
+# Coverage reports/ unit tests
+cover/
+.coverage*
+!.coveragerc
+.tox
+.stestr
+.venv

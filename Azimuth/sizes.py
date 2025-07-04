@@ -7,6 +7,7 @@ class SizeKeywords:
     """
     Keywords for interacting with sizes.
     """
+
     def __init__(self, ctx):
         self._ctx = ctx
 
@@ -15,21 +16,21 @@ class SizeKeywords:
         return self._ctx.client.sizes()
 
     @keyword
-    def list_sizes(self) -> t.List[t.Dict[str, t.Any]]:
+    def list_sizes(self) -> list[dict[str, t.Any]]:
         """
         Lists available sizes using the active client.
         """
         return list(self._resource.list())
-    
+
     @keyword
-    def fetch_size(self, id: str) -> t.Dict[str, t.Any]:
+    def fetch_size(self, id: str) -> dict[str, t.Any]:  # noqa: A002
         """
         Fetches a size by id using the active client.
         """
         return self._resource.fetch(id)
 
     @keyword
-    def find_size_by_name(self, name: str) -> t.Dict[str, t.Any]:
+    def find_size_by_name(self, name: str) -> dict[str, t.Any]:
         """
         Finds a size by name using the active client.
         """
@@ -47,8 +48,8 @@ class SizeKeywords:
         min_disk: int = 0,
         min_ephemeral_disk: int = 0,
         sort_by: str = "ram,cpus,disk,ephemeral_disk",
-        **kwargs
-    ) -> t.Dict[str, t.Any]:
+        **kwargs,
+    ) -> dict[str, t.Any]:
         """
         Finds the smallest size that fulfils the specified resource requirements.
         """
@@ -56,14 +57,16 @@ class SizeKeywords:
             size
             for size in self._resource.list()
             if (
-                size.cpus >= min_cpus and
-                size.ram >= min_ram and
-                size.disk >= min_disk and
-                size.ephemeral_disk >= min_ephemeral_disk
+                size.cpus >= min_cpus
+                and size.ram >= min_ram
+                and size.disk >= min_disk
+                and size.ephemeral_disk >= min_ephemeral_disk
             )
         )
-        key_func = lambda size: tuple(getattr(size, attr) for attr in sort_by.split(","))
+        key_func = lambda size: tuple(  # noqa: E731
+            getattr(size, attr) for attr in sort_by.split(",")
+        )
         try:
-            return next(iter(sorted(candidates, key = key_func)))
+            return next(iter(sorted(candidates, key=key_func)))
         except StopIteration:
             raise ValueError("no available sizes fulfilling resource requirements")

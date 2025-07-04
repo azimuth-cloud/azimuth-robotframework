@@ -9,6 +9,7 @@ class ClusterKeywords:
     """
     Keywords for interacting with clusters.
     """
+
     def __init__(self, ctx):
         self._ctx = ctx
 
@@ -17,21 +18,21 @@ class ClusterKeywords:
         return self._ctx.client.clusters()
 
     @keyword
-    def list_clusters(self) -> t.List[t.Dict[str, t.Any]]:
+    def list_clusters(self) -> list[dict[str, t.Any]]:
         """
         Lists clusters using the active client.
         """
         return list(self._resource.list())
-    
+
     @keyword
-    def fetch_cluster_by_id(self, id: str) -> t.Dict[str, t.Any]:
+    def fetch_cluster_by_id(self, id: str) -> dict[str, t.Any]:  # noqa: A002
         """
         Fetches a cluster by id using the active client.
         """
         return self._resource.fetch(id)
-    
+
     @keyword
-    def find_cluster_by_name(self, name: str) -> t.Dict[str, t.Any]:
+    def find_cluster_by_name(self, name: str) -> dict[str, t.Any]:
         """
         Finds a cluster by name using the active client.
         """
@@ -39,32 +40,31 @@ class ClusterKeywords:
             return next(c for c in self._resource.list() if c.name == name)
         except StopIteration:
             raise ValueError(f"no cluster with name '{name}'")
-    
+
     @keyword
     def create_cluster(
-        self,
-        name: str,
-        cluster_type: str,
-        **parameter_values: t.Any
-    ) -> t.Dict[str, t.Any]:
+        self, name: str, cluster_type: str, **parameter_values: t.Any
+    ) -> dict[str, t.Any]:
         """
         Creates a cluster using the active client.
         """
-        return self._resource.create({
-            "name": name,
-            "cluster_type" : cluster_type,
-            "parameter_values": parameter_values,
-        })
+        return self._resource.create(
+            {
+                "name": name,
+                "cluster_type": cluster_type,
+                "parameter_values": parameter_values,
+            }
+        )
 
     @keyword
-    def patch_cluster(self, id: str) -> t.Dict[str, t.Any]:
+    def patch_cluster(self, id: str) -> dict[str, t.Any]:  # noqa: A002
         """
         Patches the specified cluster.
         """
         return self._resource.action(id, "patch")
 
     @keyword
-    def delete_cluster(self, id: str, interval: int = 15):
+    def delete_cluster(self, id: str, interval: int = 15):  # noqa: A002
         """
         Deletes the specified cluster and waits for it to be deleted.
         """
@@ -73,10 +73,10 @@ class ClusterKeywords:
     @keyword
     def wait_for_cluster_status(
         self,
-        id: str,
+        id: str,  # noqa: A002
         target_status: str,
-        interval: int = 15
-    ) -> t.Dict[str, t.Any]:
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
         """
         Waits for the specified cluster to reach the target status before returning it.
         """
@@ -87,18 +87,18 @@ class ClusterKeywords:
             target_status,
             {"CONFIGURING", "DELETING"},
             "error_message",
-            interval
+            interval,
         )
 
     @keyword
-    def wait_for_cluster_ready(self, id: str, interval: int = 15) -> t.Dict[str, t.Any]:
+    def wait_for_cluster_ready(self, id: str, interval: int = 15) -> dict[str, t.Any]:  # noqa: A002
         """
         Waits for the cluster status to be ready before returning it.
         """
         return self.wait_for_cluster_status(id, "READY", interval)
 
     @keyword
-    def get_cluster_service_url(self, cluster: t.Dict[str, t.Any], name: str) -> str:
+    def get_cluster_service_url(self, cluster: dict[str, t.Any], name: str) -> str:
         """
         Returns the Zenith FQDN for the specified cluster service.
         """
