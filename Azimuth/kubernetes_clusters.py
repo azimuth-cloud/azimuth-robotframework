@@ -1,9 +1,12 @@
 import contextlib
 import dataclasses
 import enum
+import io
 import os
 import subprocess
+import tarfile
 import tempfile
+import time
 import typing as t
 
 from robot.api import logger
@@ -27,13 +30,13 @@ class NodeGroupConfig:
 
     def __post_init__(self):
         if self.autoscale:
-            assert self.min_count is not None and self.max_count is not None, (
-                "min_count and max_count are required for autoscaling groups"
-            )
+            assert (
+                self.min_count is not None and self.max_count is not None
+            ), "min_count and max_count are required for autoscaling groups"
         else:
-            assert self.count is not None, (
-                "count is required for non-autoscaling groups"
-            )
+            assert (
+                self.count is not None
+            ), "count is required for non-autoscaling groups"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -400,3 +403,81 @@ class KubernetesClusterKeywords:
         assert results_proc.returncode == 0, "sonobuoy results command failed"
         logger.info(results_proc.stdout)
         return results_proc.stdout
+
+    def _run_logcli_cmd(self, executable, *args):
+        proc = subprocess.run([executable, *args], capture_output=True)
+        if proc.returncode != 0:
+            logger.info("logcli command failed")
+            logger.info(proc.stderr)
+        return proc
+
+    @contextlib.contextmanager
+    def _port_forward_loki(self, kubeconfig):
+        """
+        Starts a kubectl port-forward to the Loki pod and return the local address.
+        """
+        pf_proc = subprocess.Popen(
+            [
+                "kubectl",
+                "--kubeconfig",
+                kubeconfig,
+                "port-forward",
+                "-n",
+                "monitoring-system",
+                "svc/loki-stack",
+                f"3100:3100",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            time.sleep(2)
+            if pf_proc.poll() is not None:
+                raise RuntimeError(
+                    f"kubectl port-forward exited early: {pf_proc.stderr.read()}"
+                )
+            yield f"http://localhost:3100"
+        finally:
+            pf_proc.terminate()
+            pf_proc.wait()
+
+    @keyword
+    def query_loki_logs_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        executable="logcli",
+        query='{job=~".+"}',
+        output_path="loki_logs.tar.gz",
+        extra_args: list[str] | None = None,
+    ):
+        """
+        Queries Loki logs via logcli for the specified cluster.
+
+        Port-forwards to the Loki service on the cluster, then runs logcli
+        against the forwarded port. The output is saved as a tar.gz archive.
+
+        Returns the path to the created tar.gz file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            with self._port_forward_loki(kubeconfig) as addr:
+                proc = self._run_logcli_cmd(
+                    executable,
+                    "query",
+                    f"--addr={addr}",
+                    *(extra_args or []),
+                    query,
+                )
+        assert proc.returncode == 0, "logcli query command failed"
+        logger.info(proc.stdout)
+
+        # Write the output to a tar.gz archive
+        log_data = proc.stdout
+        if isinstance(log_data, str):
+            log_data = log_data.encode()
+        with tarfile.open(output_path, "w:gz") as tar:
+            info = tarfile.TarInfo(name="loki_logs.txt")
+            info.size = len(log_data)
+            tar.addfile(info, io.BytesIO(log_data))
+        logger.info(f"Loki logs archived to {output_path}")
+        return output_path
