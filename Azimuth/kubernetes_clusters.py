@@ -465,6 +465,7 @@ class KubernetesClusterKeywords:
                     executable,
                     "query",
                     f"--addr={addr}",
+                    "--limit=999",
                     *(extra_args or []),
                     query,
                 )
