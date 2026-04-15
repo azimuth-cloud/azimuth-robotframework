@@ -1,4 +1,5 @@
 import contextlib
+import socket
 import dataclasses
 import enum
 import io
@@ -437,11 +438,23 @@ class KubernetesClusterKeywords:
             stderr=subprocess.PIPE,
         )
         try:
-            time.sleep(2)
-            if pf_proc.poll() is not None:
-                raise RuntimeError(
-                    f"kubectl port-forward exited early: {pf_proc.stderr.read()}"
-                )
+            # Poll until the forwarded port is accepting connections
+            deadline = time.monotonic() + 30
+            while True:
+                # Check if the port-forward process died
+                if pf_proc.poll() is not None:
+                    raise RuntimeError(
+                        f"kubectl port-forward exited early: {pf_proc.stderr.read()}"
+                    )
+                try:
+                    with socket.create_connection(("localhost", local_port), timeout=1):
+                        break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError(
+                            f"Port {local_port} did not become available within 30s"
+                        )
+                    time.sleep(0.5)
             yield f"http://localhost:{local_port}"
         finally:
             pf_proc.terminate()
