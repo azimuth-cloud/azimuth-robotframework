@@ -412,7 +412,13 @@ class KubernetesClusterKeywords:
         return proc
 
     @contextlib.contextmanager
-    def _port_forward_loki(self, kubeconfig):
+    def _port_forward_loki(
+        self,
+        kubeconfig,
+        local_port=3100,
+        namespace="monitoring-system",
+        service="svc/loki-stack",
+    ):
         """
         Starts a kubectl port-forward to the Loki pod and return the local address.
         """
@@ -423,9 +429,9 @@ class KubernetesClusterKeywords:
                 kubeconfig,
                 "port-forward",
                 "-n",
-                "monitoring-system",
-                "svc/loki-stack",
-                f"3100:3100",
+                namespace,
+                service,
+                f"{local_port}:3100",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -436,7 +442,7 @@ class KubernetesClusterKeywords:
                 raise RuntimeError(
                     f"kubectl port-forward exited early: {pf_proc.stderr.read()}"
                 )
-            yield f"http://localhost:3100"
+            yield f"http://localhost:{local_port}"
         finally:
             pf_proc.terminate()
             pf_proc.wait()
@@ -448,8 +454,12 @@ class KubernetesClusterKeywords:
         *,
         executable="logcli",
         query='{job=~".+"}',
+        limit: int = 999,
         output_path="loki_logs.tar.gz",
         extra_args: list[str] | None = None,
+        loki_namespace="monitoring-system",
+        loki_service="svc/loki-stack",
+        loki_port: int = 3100,
     ):
         """
         Queries Loki logs via logcli for the specified cluster.
@@ -460,12 +470,17 @@ class KubernetesClusterKeywords:
         Returns the path to the created tar.gz file.
         """
         with self._kubeconfig_for_cluster(id) as kubeconfig:
-            with self._port_forward_loki(kubeconfig) as addr:
+            with self._port_forward_loki(
+                kubeconfig,
+                local_port=loki_port,
+                namespace=loki_namespace,
+                service=loki_service,
+            ) as addr:
                 proc = self._run_logcli_cmd(
                     executable,
                     "query",
                     f"--addr={addr}",
-                    "--limit=999",
+                    f"--limit={limit}",
                     *(extra_args or []),
                     query,
                 )
