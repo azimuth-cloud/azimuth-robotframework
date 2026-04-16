@@ -1,9 +1,9 @@
 import contextlib
-import socket
 import dataclasses
 import enum
 import io
 import os
+import socket
 import subprocess
 import tarfile
 import tempfile
@@ -31,13 +31,13 @@ class NodeGroupConfig:
 
     def __post_init__(self):
         if self.autoscale:
-            assert (
-                self.min_count is not None and self.max_count is not None
-            ), "min_count and max_count are required for autoscaling groups"
+            assert self.min_count is not None and self.max_count is not None, (
+                "min_count and max_count are required for autoscaling groups"
+            )
         else:
-            assert (
-                self.count is not None
-            ), "count is required for non-autoscaling groups"
+            assert self.count is not None, (
+                "count is required for non-autoscaling groups"
+            )
 
 
 @dataclasses.dataclass(frozen=True)
