@@ -2,6 +2,7 @@ import contextlib
 import dataclasses
 import enum
 import io
+import json
 import os
 import socket
 import subprocess
@@ -509,4 +510,90 @@ class KubernetesClusterKeywords:
             info.size = len(log_data)
             tar.addfile(info, io.BytesIO(log_data))
         logger.info(f"Loki logs archived to {output_path}")
+        return output_path
+
+    @keyword
+    def get_pod_events_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        output_path="pod_events.json",
+    ):
+        """
+        Retrieves all Pod-related events from the specified cluster.
+
+        Runs ``kubectl get events -A --field-selector involvedObject.kind=Pod -o json``
+        and saves the output as a JSON file.
+
+        Returns the path to the created JSON file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "kubectl",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "get",
+                    "events",
+                    "-A",
+                    "--field-selector",
+                    "involvedObject.kind=Pod",
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("kubectl get events command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "kubectl get events command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Pod events saved to {output_path}")
+        return output_path
+
+    @keyword
+    def get_helm_releases_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        output_path="helm_releases.json",
+    ):
+        """
+        Retrieves all Helm releases from the specified cluster.
+
+        Runs ``helm list -aA -o json`` and saves the output as a JSON file.
+
+        Returns the path to the created JSON file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "helm",
+                    "list",
+                    "-aA",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("helm list command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "helm list command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Helm releases saved to {output_path}")
         return output_path
