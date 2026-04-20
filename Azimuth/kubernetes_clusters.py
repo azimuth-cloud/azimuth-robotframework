@@ -1,9 +1,14 @@
 import contextlib
 import dataclasses
 import enum
+import io
+import json
 import os
+import socket
 import subprocess
+import tarfile
 import tempfile
+import time
 import typing as t
 
 from robot.api import logger
@@ -400,3 +405,195 @@ class KubernetesClusterKeywords:
         assert results_proc.returncode == 0, "sonobuoy results command failed"
         logger.info(results_proc.stdout)
         return results_proc.stdout
+
+    def _run_logcli_cmd(self, executable, *args):
+        proc = subprocess.run([executable, *args], capture_output=True)
+        if proc.returncode != 0:
+            logger.info("logcli command failed")
+            logger.info(proc.stderr)
+        return proc
+
+    @contextlib.contextmanager
+    def _port_forward_loki(
+        self,
+        kubeconfig,
+        local_port=3100,
+        namespace="monitoring-system",
+        service="svc/loki-stack",
+    ):
+        """
+        Starts a kubectl port-forward to the Loki pod and return the local address.
+        """
+        pf_proc = subprocess.Popen(
+            [
+                "kubectl",
+                "--kubeconfig",
+                kubeconfig,
+                "port-forward",
+                "-n",
+                namespace,
+                service,
+                f"{local_port}:3100",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            # Poll until the forwarded port is accepting connections
+            deadline = time.monotonic() + 30
+            while True:
+                # Check if the port-forward process died
+                if pf_proc.poll() is not None:
+                    raise RuntimeError(
+                        f"kubectl port-forward exited early: {pf_proc.stderr.read()}"
+                    )
+                try:
+                    with socket.create_connection(("localhost", local_port), timeout=1):
+                        break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError(
+                            f"Port {local_port} did not become available within 30s"
+                        )
+                    time.sleep(0.5)
+            yield f"http://localhost:{local_port}"
+        finally:
+            pf_proc.terminate()
+            pf_proc.wait()
+
+    @keyword
+    def query_loki_logs_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        executable="logcli",
+        query='{job=~".+"}',
+        limit: int = 999,
+        output_path="loki_logs.tar.gz",
+        extra_args: list[str] | None = None,
+        loki_namespace="monitoring-system",
+        loki_service="svc/loki-stack",
+        loki_port: int = 3100,
+    ):
+        """
+        Queries Loki logs via logcli for the specified cluster.
+
+        Port-forwards to the Loki service on the cluster, then runs logcli
+        against the forwarded port. The output is saved as a tar.gz archive.
+
+        Returns the path to the created tar.gz file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            with self._port_forward_loki(
+                kubeconfig,
+                local_port=loki_port,
+                namespace=loki_namespace,
+                service=loki_service,
+            ) as addr:
+                proc = self._run_logcli_cmd(
+                    executable,
+                    "query",
+                    f"--addr={addr}",
+                    f"--limit={limit}",
+                    *(extra_args or []),
+                    query,
+                )
+        assert proc.returncode == 0, "logcli query command failed"
+        logger.info(proc.stdout)
+
+        # Write the output to a tar.gz archive
+        log_data = proc.stdout
+        if isinstance(log_data, str):
+            log_data = log_data.encode()
+        with tarfile.open(output_path, "w:gz") as tar:
+            info = tarfile.TarInfo(name="loki_logs.txt")
+            info.size = len(log_data)
+            tar.addfile(info, io.BytesIO(log_data))
+        logger.info(f"Loki logs archived to {output_path}")
+        return output_path
+
+    @keyword
+    def get_pod_events_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        output_path="pod_events.json",
+    ):
+        """
+        Retrieves all Pod-related events from the specified cluster.
+
+        Runs ``kubectl get events -A --field-selector involvedObject.kind=Pod -o json``
+        and saves the output as a JSON file.
+
+        Returns the path to the created JSON file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "kubectl",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "get",
+                    "events",
+                    "-A",
+                    "--field-selector",
+                    "involvedObject.kind=Pod",
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("kubectl get events command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "kubectl get events command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Pod events saved to {output_path}")
+        return output_path
+
+    @keyword
+    def get_helm_releases_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        output_path="helm_releases.json",
+    ):
+        """
+        Retrieves all Helm releases from the specified cluster.
+
+        Runs ``helm list -aA -o json`` and saves the output as a JSON file.
+
+        Returns the path to the created JSON file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "helm",
+                    "list",
+                    "-aA",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("helm list command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "helm list command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Helm releases saved to {output_path}")
+        return output_path
