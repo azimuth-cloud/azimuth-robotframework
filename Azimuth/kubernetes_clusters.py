@@ -261,6 +261,71 @@ class KubernetesClusterKeywords:
         return data["kubeconfig"]
 
     @keyword
+    def wait_for_kubernetes_cluster_addons_status(
+        self,
+        id: str,  # noqa: A002
+        target_status: str,
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for the specified cluster to reach the target status before returning it.
+        """
+        return util.wait_for_many_resource_status(
+            self._resource,
+            id,
+            "addons",
+            target_status,
+            {"Installing", "Preparing", "Pending", "Upgrading", "Uninstalling"},
+            "error_message",
+            interval,
+        )
+
+    @keyword
+    def wait_for_kubernetes_cluster_addons_deployed(
+        self,
+        id: str,  # noqa: A002
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for the cluster addons to be status Ready
+        before returning the cluster.
+        """
+        return self.wait_for_kubernetes_cluster_addons_status(id, "Deployed", interval)
+
+    @keyword
+    def wait_for_kubernetes_cluster_nodes_status(
+        self,
+        id: str,  # noqa: A002
+        target_status: str,
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for all nodes in the specified cluster to reach the target
+        status before returning it.
+        """
+        return util.wait_for_many_resource_status(
+            self._resource,
+            id,
+            "nodes",
+            target_status,
+            {"Provisioning", "Pending", "Deleting", "Unhealthy", "Unknown"},
+            "error_message",
+            interval,
+        )
+
+    @keyword
+    def wait_for_kubernetes_cluster_nodes_ready(
+        self,
+        id: str,  # noqa: A002
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for all cluster nodes to be status Ready before
+        returning the cluster.
+        """
+        return self.wait_for_kubernetes_cluster_nodes_status(id, "Ready", interval)
+
+    @keyword
     def wait_for_kubernetes_cluster_status(
         self,
         id: str,  # noqa: A002
