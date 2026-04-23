@@ -14,7 +14,7 @@ import typing as t
 from robot.api import logger
 from robot.api.deco import keyword
 
-from . import util
+from . import openstack_cloud, util
 
 
 @dataclasses.dataclass(frozen=True)
@@ -704,3 +704,28 @@ class KubernetesClusterKeywords:
             json.dump(data, f, indent=2)
         logger.info(f"Helm releases saved to {output_path}")
         return output_path
+
+    @keyword
+    def get_console_logs_for_kubernetes_cluster_nodes(
+        self,
+        id: str,  # noqa: A002
+        output_prefix="console-logs",
+    ):
+        """
+        Retrieves console logs for all openstack nodes in the cluster and
+        saves the output as a text file.
+        """
+        cluster = self.fetch_kubernetes_cluster_by_id(id)
+        nodes = getattr(cluster, "nodes")
+
+        for node_name in [node["name"] for node in nodes]:
+            console_log = openstack_cloud.get_console_log_for_server(node_name)
+            if console_log:
+                output_path = f"{output_prefix}-{node_name}.log"
+                with open(output_path, "w") as f:
+                    f.write(console_log["output"])
+                    logger.info(f"Wrote log for {node_name} to {output_path}")
+            else:
+                logger.warn(
+                    f"Could not retrieve logs for {node_name}, no server exists"
+                )
