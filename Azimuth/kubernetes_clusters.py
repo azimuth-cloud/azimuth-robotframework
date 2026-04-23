@@ -623,6 +623,48 @@ class KubernetesClusterKeywords:
         return output_path
 
     @keyword
+    def get_nodes_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        output_path="node_status.json",
+    ):
+        """
+        Retrieves status for all nodes from the specified cluster.
+
+        Runs ``kubectl get nodes -o json`` and saves the output as
+        a JSON file.
+
+        Returns the path to the created JSON file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "kubectl",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "get",
+                    "nodes",
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("kubectl get nodes command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "kubectl get nodes command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Node information saved to {output_path}")
+        return output_path
+
+    @keyword
     def get_helm_releases_for_kubernetes_cluster(
         self,
         id: str,  # noqa: A002
