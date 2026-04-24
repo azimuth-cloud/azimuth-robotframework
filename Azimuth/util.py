@@ -2,6 +2,7 @@ import time
 import typing as t
 
 import azimuth_sdk
+from robot.api import logger
 
 
 def wait_for_resource(
@@ -40,9 +41,57 @@ def wait_for_resource_property(
         if property_value == target_value:
             return True
         elif property_value in working_values:
+            logger.info(
+                f"{property} is {property_value} not {target_value}, waiting..."
+            )
             return False
         else:
             message = f"unexpected {property} - {property_value}"
+            error_message = getattr(instance, error_message_property, None)
+            if error_message:
+                message = f"{message} - {error_message}"
+            raise AssertionError(message)
+
+    return wait_for_resource(resource, id, predicate, interval)
+
+
+def wait_for_many_resource_status(
+    resource,
+    id: str,  # noqa: A002
+    property: str,  # noqa: A002
+    target_value: t.Any,
+    working_values: t.Collection[t.Any],
+    error_message_property: str,
+    interval: int,
+) -> dict[str, t.Any]:
+    """
+    Waits for the status field of all elements of a specified list property on
+    the instance with the given ID to reach a target value. It will only continue
+    while the status field of the property all have values in the working values
+    or are the target value.
+    """
+
+    def predicate(instance):
+        property_value = getattr(instance, property)
+        working_values.add(target_value)
+        if len(property_value) == 0:
+            logger.info(f"Property {property} has 0 elements, waiting...")
+            return False
+        if all([element["status"] == target_value for element in property_value]):
+            return True
+        elif all([element["status"] in working_values for element in property_value]):
+            failed_elements = [
+                element
+                for element in property_value
+                if element["status"] != target_value
+            ]
+            logger.info(
+                f"Property {property} statuses are not {target_value}, "
+                f"{failed_elements} waiting..."
+            )
+            return False
+        else:
+            message = f"unexpected {property} status - {property_value}"
             error_message = getattr(instance, error_message_property, None)
             if error_message:
                 message = f"{message} - {error_message}"

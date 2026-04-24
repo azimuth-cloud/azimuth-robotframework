@@ -14,7 +14,7 @@ import typing as t
 from robot.api import logger
 from robot.api.deco import keyword
 
-from . import util
+from . import openstack_cloud, util
 
 
 @dataclasses.dataclass(frozen=True)
@@ -259,6 +259,71 @@ class KubernetesClusterKeywords:
         """
         data = self._resource.action(id, "kubeconfig")
         return data["kubeconfig"]
+
+    @keyword
+    def wait_for_kubernetes_cluster_addons_status(
+        self,
+        id: str,  # noqa: A002
+        target_status: str,
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for the specified cluster to reach the target status before returning it.
+        """
+        return util.wait_for_many_resource_status(
+            self._resource,
+            id,
+            "addons",
+            target_status,
+            {"Installing", "Preparing", "Pending", "Upgrading", "Uninstalling"},
+            "error_message",
+            interval,
+        )
+
+    @keyword
+    def wait_for_kubernetes_cluster_addons_deployed(
+        self,
+        id: str,  # noqa: A002
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for the cluster addons to be status Ready
+        before returning the cluster.
+        """
+        return self.wait_for_kubernetes_cluster_addons_status(id, "Deployed", interval)
+
+    @keyword
+    def wait_for_kubernetes_cluster_nodes_status(
+        self,
+        id: str,  # noqa: A002
+        target_status: str,
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for all nodes in the specified cluster to reach the target
+        status before returning it.
+        """
+        return util.wait_for_many_resource_status(
+            self._resource,
+            id,
+            "nodes",
+            target_status,
+            {"Provisioning", "Pending", "Deleting", "Unhealthy", "Unknown"},
+            "error_message",
+            interval,
+        )
+
+    @keyword
+    def wait_for_kubernetes_cluster_nodes_ready(
+        self,
+        id: str,  # noqa: A002
+        interval: int = 15,
+    ) -> dict[str, t.Any]:
+        """
+        Waits for all cluster nodes to be status Ready before
+        returning the cluster.
+        """
+        return self.wait_for_kubernetes_cluster_nodes_status(id, "Ready", interval)
 
     @keyword
     def wait_for_kubernetes_cluster_status(
@@ -558,6 +623,48 @@ class KubernetesClusterKeywords:
         return output_path
 
     @keyword
+    def get_nodes_for_kubernetes_cluster(
+        self,
+        id: str,  # noqa: A002
+        *,
+        output_path="node_status.json",
+    ):
+        """
+        Retrieves status for all nodes from the specified cluster.
+
+        Runs ``kubectl get nodes -o json`` and saves the output as
+        a JSON file.
+
+        Returns the path to the created JSON file.
+        """
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "kubectl",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "get",
+                    "nodes",
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("kubectl get nodes command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "kubectl get nodes command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        with open(output_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Node information saved to {output_path}")
+        return output_path
+
+    @keyword
     def get_helm_releases_for_kubernetes_cluster(
         self,
         id: str,  # noqa: A002
@@ -597,3 +704,28 @@ class KubernetesClusterKeywords:
             json.dump(data, f, indent=2)
         logger.info(f"Helm releases saved to {output_path}")
         return output_path
+
+    @keyword
+    def get_console_logs_for_kubernetes_cluster_nodes(
+        self,
+        id: str,  # noqa: A002
+        output_prefix="console-logs",
+    ):
+        """
+        Retrieves console logs for all openstack nodes in the cluster and
+        saves the output as a text file.
+        """
+        cluster = self.fetch_kubernetes_cluster_by_id(id)
+        nodes = getattr(cluster, "nodes")
+
+        for node_name in [node["name"] for node in nodes]:
+            console_log = openstack_cloud.get_console_log_for_server(node_name)
+            if console_log:
+                output_path = f"{output_prefix}-{node_name}.log"
+                with open(output_path, "w") as f:
+                    f.write(console_log["output"])
+                    logger.info(f"Wrote log for {node_name} to {output_path}")
+            else:
+                logger.warn(
+                    f"Could not retrieve logs for {node_name}, no server exists"
+                )
