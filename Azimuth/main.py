@@ -14,6 +14,7 @@ from .kubernetes_cluster_templates import KubernetesClusterTemplateKeywords
 from .kubernetes_clusters import KubernetesClusterKeywords
 from .sizes import SizeKeywords
 from .zenith import ZenithKeywords
+import os
 
 
 class Azimuth(DynamicCore):
@@ -65,6 +66,14 @@ class Azimuth(DynamicCore):
         """
         Creates an Azimuth SDK client using the given authentication.
         """
+
+        # Allow disabling request pooling using an env var.
+        pool_requests = os.environ.get(
+            "AZIMUTH_ROBOTFRAMEWORK_POOL_REQUESTS", "true"
+        ).lower() in ("true", "1", "t")
+        if pool_requests is False:
+            kwargs.setdefault("headers", {}).setdefault("Connection", "close")
+
         self._create_client(
             Configuration.create(
                 base_url,
