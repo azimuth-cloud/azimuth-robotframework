@@ -1,3 +1,4 @@
+import os
 import secrets
 import string
 import typing as t
@@ -14,7 +15,6 @@ from .kubernetes_cluster_templates import KubernetesClusterTemplateKeywords
 from .kubernetes_clusters import KubernetesClusterKeywords
 from .sizes import SizeKeywords
 from .zenith import ZenithKeywords
-import os
 
 
 class Azimuth(DynamicCore):
