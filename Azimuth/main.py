@@ -1,3 +1,4 @@
+import logging
 import os
 import secrets
 import string
@@ -15,8 +16,6 @@ from .kubernetes_cluster_templates import KubernetesClusterTemplateKeywords
 from .kubernetes_clusters import KubernetesClusterKeywords
 from .sizes import SizeKeywords
 from .zenith import ZenithKeywords
-
-import logging
 
 logger = logging.getLogger()
 
