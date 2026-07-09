@@ -56,6 +56,7 @@ class KubernetesClusterConfig:
     ingress_enabled: bool = False
     ingress_controller_load_balancer_ip: str | None = None
     monitoring_enabled: bool = False
+    schedule: dict[str, t.Any] | None = None
 
 
 @enum.unique
@@ -224,6 +225,15 @@ class KubernetesClusterKeywords:
         Disables monitoring for the current Kubernetes config.
         """
         return dataclasses.replace(config, monitoring_enabled=False)
+
+    @keyword
+    def enable_scheduling_for_kubernetes_config(
+        self, config: KubernetesClusterConfig, end_time: str
+    ) -> KubernetesClusterConfig:
+        """
+        Enables platform scheduling for the current Kubernetes config.
+        """
+        return dataclasses.replace(config, schedule={"end_time": end_time})
 
     @keyword
     def create_kubernetes_cluster(
