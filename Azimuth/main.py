@@ -1,3 +1,5 @@
+import logging
+import os
 import secrets
 import string
 import typing as t
@@ -14,6 +16,8 @@ from .kubernetes_cluster_templates import KubernetesClusterTemplateKeywords
 from .kubernetes_clusters import KubernetesClusterKeywords
 from .sizes import SizeKeywords
 from .zenith import ZenithKeywords
+
+logger = logging.getLogger()
 
 
 class Azimuth(DynamicCore):
@@ -48,6 +52,15 @@ class Azimuth(DynamicCore):
         # Clean up any old clients first
         if self.client:
             self.client.__exit__()
+
+        # Allow disabling request pooling using an env var.
+        pool_requests = os.environ.get(
+            "AZIMUTH_ROBOTFRAMEWORK_POOL_REQUESTS", "true"
+        ).lower() in ("true", "1", "t")
+        if pool_requests is False:
+            logger.warning("Disabling request pooling in azimuth-robotframework.")
+            config._kwargs.setdefault("headers", {}).setdefault("Connection", "close")
+
         self.client = config.sync_client()
         self.client.__enter__()
 
