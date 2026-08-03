@@ -380,6 +380,10 @@ class KubernetesClusterKeywords:
         """
         # Allow some shortcut names
         names = {name}
+        if name == "headlamp":
+            names.add("headlamp-client")
+        # Kubernetes Dashboard is deprecated in Azimuth, keeping to maintain backwards
+        # compatibility
         if name in {"dashboard", "kubernetes-dashboard"}:
             names.add("kubernetes-dashboard-client")
         if name == "monitoring":
