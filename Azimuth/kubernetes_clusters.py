@@ -11,6 +11,7 @@ import tempfile
 import time
 import typing as t
 
+from packaging.version import Version
 from robot.api import logger
 from robot.api.deco import keyword
 
@@ -678,12 +679,23 @@ class KubernetesClusterKeywords:
 
         Returns the path to the created JSON file.
         """
+
+        helm_version_out = subprocess.run(
+            ["helm", "version", "--short"], capture_output=True
+        )
+        helm_version = Version(helm_version_out.stdout.decode("utf-8"))
+        logger.debug(f"Detected Helm version: {helm_version}")
+        helm_list_all_namespaces_arg = "-aA"
+
+        if helm_version >= Version("4.0.0"):
+            helm_list_all_namespaces_arg = "-A"
+
         with self._kubeconfig_for_cluster(id) as kubeconfig:
             proc = subprocess.run(
                 [
                     "helm",
                     "list",
-                    "-aA",
+                    helm_list_all_namespaces_arg,
                     "--kubeconfig",
                     kubeconfig,
                     "-o",
