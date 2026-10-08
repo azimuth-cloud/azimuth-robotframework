@@ -43,18 +43,23 @@ class ClusterKeywords:
 
     @keyword
     def create_cluster(
-        self, name: str, cluster_type: str, **parameter_values: t.Any
+        self,
+        name: str,
+        cluster_type: str,
+        schedule: dict[str, t.Any] | None = None,
+        **parameter_values: t.Any,
     ) -> dict[str, t.Any]:
         """
         Creates a cluster using the active client.
         """
-        return self._resource.create(
-            {
-                "name": name,
-                "cluster_type": cluster_type,
-                "parameter_values": parameter_values,
-            }
-        )
+        payload = {
+            "name": name,
+            "cluster_type": cluster_type,
+            "parameter_values": parameter_values,
+        }
+        if schedule is not None:
+            payload["schedule"] = schedule
+        return self._resource.create(payload)
 
     @keyword
     def patch_cluster(self, id: str) -> dict[str, t.Any]:  # noqa: A002
