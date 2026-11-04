@@ -103,6 +103,23 @@ class ClusterKeywords:
         return self.wait_for_cluster_status(id, "READY", interval)
 
     @keyword
+    def get_cluster_schedule(
+        self,
+        id: str,  # noqa: A002
+        interval: int = 15,
+    ) -> str:
+        """
+        Waits for the specified cluster to have a schedule and returns its end time.
+        """
+        cluster = util.wait_for_resource(
+            self._resource,
+            id,
+            lambda cluster: bool(getattr(cluster, "schedule", None)),
+            interval,
+        )
+        return cluster.schedule["end_time"]
+
+    @keyword
     def get_cluster_service_url(self, cluster: dict[str, t.Any], name: str) -> str:
         """
         Returns the Zenith FQDN for the specified cluster service.

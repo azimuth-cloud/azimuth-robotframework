@@ -119,6 +119,23 @@ class KubernetesAppKeywords:
         return self.wait_for_kubernetes_app_status(id, "Deployed", interval)
 
     @keyword
+    def get_kubernetes_app_schedule(
+        self,
+        id: str,  # noqa: A002
+        interval: int = 15,
+    ) -> str:
+        """
+        Waits for the specified app to have a schedule and returns its end time.
+        """
+        app = util.wait_for_resource(
+            self._resource,
+            id,
+            lambda app: bool(getattr(app, "schedule", None)),
+            interval,
+        )
+        return app.schedule["end_time"]
+
+    @keyword
     def wait_for_kubernetes_app_service_url(
         self,
         id: str,  # noqa: A002
