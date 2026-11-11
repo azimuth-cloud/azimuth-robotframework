@@ -14,12 +14,27 @@ def wait_for_resource(
     """
     Waits for the specified predicate to become True for the instance with the given ID.
     """
+    errors = 0
     while True:
-        instance = resource.fetch(id)
+        try:
+            instance = resource.fetch(id)
+        ### Request failed
+        except azimuth_sdk.APIError as err:
+            # Fail if not a server side error
+            if errors > 5 or err.status_code < 500:
+                raise err
+
+            # Otherwise increment count and interval and retry
+            errors += 1
+            logger.warn(f"Error fetching resource, retrying: {err}")
+            time.sleep(interval * 2**errors)
+            continue
+
+        ### Request had success
+        errors = 0
         if predicate(instance):
             return instance
-        else:
-            time.sleep(interval)
+        time.sleep(interval)
 
 
 def wait_for_resource_property(
