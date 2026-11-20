@@ -813,7 +813,7 @@ class KubernetesClusterKeywords:
     @keyword
     def enable_traefik_healthcheck(self, cluster_id: str, namespace: str, release_name: str):
         """
-        Modify the traefik ingress release to enable and expose the healthcheck endpoint.
+        Modify the traefik release to enable and expose the healthcheck endpoint.
         """
         helm_version_out = subprocess.run(
             ["helm", "version", "--short"], capture_output=True
