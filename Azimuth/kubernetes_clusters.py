@@ -690,7 +690,10 @@ class KubernetesClusterKeywords:
         namespace: str,
         service_name: str,
     ) -> str:
-        """ """
+        """
+        Get the external IP address assigned to the named load balancer.
+        Will give up after 100 seconds and raise ValueError.
+        """
         iterations = 0
         while iterations < 20:
             try:
@@ -725,6 +728,7 @@ class KubernetesClusterKeywords:
             except KeyError:
                 pass
             time.sleep(5)
+            iterations += 1
         raise ValueError(
             f"Cannot get ip address for LoadBalancer {service_name} in {namespace}"
         )
@@ -807,8 +811,10 @@ class KubernetesClusterKeywords:
                 )
 
     @keyword
-    def enable_traefik_healthcheck(self, cluster_id: str):
-        """ """
+    def enable_traefik_healthcheck(self, cluster_id: str, namespace: str, release_name: str):
+        """
+        Modify the traefik ingress release to enable and expose the healthcheck endpoint.
+        """
         helm_version_out = subprocess.run(
             ["helm", "version", "--short"], capture_output=True
         )
@@ -827,10 +833,10 @@ class KubernetesClusterKeywords:
                     "--kubeconfig",
                     kubeconfig,
                     "-n",
-                    "traefik",
+                    namespace,
                     "get",
                     "metadata",
-                    "traefik",
+                    release_name,
                     "-o",
                     "json",
                 ],
@@ -854,9 +860,9 @@ class KubernetesClusterKeywords:
                     "--kubeconfig",
                     kubeconfig,
                     "-n",
-                    "traefik",
+                    namespace,
                     "upgrade",
-                    "traefik",
+                    release_name,
                     "traefik/traefik",
                     "--version",
                     chart_version,
@@ -879,11 +885,13 @@ class KubernetesClusterKeywords:
         """
         Checks the liveness and readiness of a Traefik healthcheck endpoint exposed
         by an IngressRoute to a Kubernetes LoadBalancer.
+        Will give up after 100 seconds.
         """
         healthcheck_url = f"http://{external_ip}/ping"
         logger.info(f"Checking ingress controller at {healthcheck_url}")
         # Wait for the healthcheck URL to return a 200
-        while True:
+        iterations = 0
+        while iterations < 20:
             try:
                 response = httpx.get(
                     healthcheck_url,
@@ -900,3 +908,5 @@ class KubernetesClusterKeywords:
                     # Not an error we expect to see during traefik startup
                     response.raise_for_status()
             time.sleep(5)
+            iterations += 1
+        assert False, "Traefik ingress did not return 200"
