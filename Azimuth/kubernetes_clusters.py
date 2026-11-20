@@ -903,7 +903,7 @@ class KubernetesClusterKeywords:
             else:
                 if response.status_code == 200:
                     # It works - we can exit!
-                    break
+                    return
                 elif response.status_code not in [404, 500, 502, 503, 504]:
                     # Not an error we expect to see during traefik startup
                     response.raise_for_status()
