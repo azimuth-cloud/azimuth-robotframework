@@ -11,6 +11,7 @@ import tempfile
 import time
 import typing as t
 
+import httpx
 from packaging.version import Version
 from robot.api import logger
 from robot.api.deco import keyword
@@ -92,11 +93,13 @@ class KubernetesClusterKeywords:
         return list(self._resource.list())
 
     @keyword
-    def fetch_kubernetes_cluster_by_id(self, id: str) -> dict[str, t.Any]:  # noqa: A002
+    def fetch_kubernetes_cluster_by_cluster_id(
+        self, cluster_id: str
+    ) -> dict[str, t.Any]:
         """
-        Fetches a Kubernetes cluster by id using the active client.
+        Fetches a Kubernetes cluster by cluster_id using the active client.
         """
-        return self._resource.fetch(id)
+        return self._resource.fetch(cluster_id)
 
     @keyword
     def find_kubernetes_cluster_by_name(self, name: str) -> dict[str, t.Any]:
@@ -248,33 +251,33 @@ class KubernetesClusterKeywords:
     @keyword
     def upgrade_kubernetes_cluster(
         self,
-        id: str,  # noqa: A002
-        template_id: str,
+        cluster_id: str,
+        template_cluster_id: str,
     ) -> dict[str, t.Any]:
         """
         Upgrades the specified Kubernetes cluster to a new template.
         """
-        return self._resource.patch(id, {"template": template_id})
+        return self._resource.patch(cluster_id, {"template": template_cluster_id})
 
     @keyword
-    def delete_kubernetes_cluster(self, id: str, interval: int = 15):  # noqa: A002
+    def delete_kubernetes_cluster(self, cluster_id: str, interval: int = 15):
         """
         Deletes the specified Kubernetes cluster and waits for it to be deleted.
         """
-        util.delete_resource(self._resource, id, interval)
+        util.delete_resource(self._resource, cluster_id, interval)
 
     @keyword
-    def get_kubeconfig_for_kubernetes_cluster(self, id: str) -> str:  # noqa: A002
+    def get_kubeconfig_for_kubernetes_cluster(self, cluster_id: str) -> str:
         """
         Returns the kubeconfig for the specified Kubernetes cluster.
         """
-        data = self._resource.action(id, "kubeconfig")
+        data = self._resource.action(cluster_id, "kubeconfig")
         return data["kubeconfig"]
 
     @keyword
     def wait_for_kubernetes_cluster_addons_status(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         target_status: str,
         interval: int = 15,
     ) -> dict[str, t.Any]:
@@ -283,7 +286,7 @@ class KubernetesClusterKeywords:
         """
         return util.wait_for_many_resource_status(
             self._resource,
-            id,
+            cluster_id,
             "addons",
             target_status,
             {"Installing", "Preparing", "Pending", "Upgrading", "Uninstalling"},
@@ -294,19 +297,21 @@ class KubernetesClusterKeywords:
     @keyword
     def wait_for_kubernetes_cluster_addons_deployed(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         interval: int = 15,
     ) -> dict[str, t.Any]:
         """
         Waits for the cluster addons to be status Ready
         before returning the cluster.
         """
-        return self.wait_for_kubernetes_cluster_addons_status(id, "Deployed", interval)
+        return self.wait_for_kubernetes_cluster_addons_status(
+            cluster_id, "Deployed", interval
+        )
 
     @keyword
     def wait_for_kubernetes_cluster_nodes_status(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         target_status: str,
         interval: int = 15,
     ) -> dict[str, t.Any]:
@@ -316,7 +321,7 @@ class KubernetesClusterKeywords:
         """
         return util.wait_for_many_resource_status(
             self._resource,
-            id,
+            cluster_id,
             "nodes",
             target_status,
             {"Provisioning", "Pending", "Deleting", "Unhealthy", "Unknown"},
@@ -327,19 +332,21 @@ class KubernetesClusterKeywords:
     @keyword
     def wait_for_kubernetes_cluster_nodes_ready(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         interval: int = 15,
     ) -> dict[str, t.Any]:
         """
         Waits for all cluster nodes to be status Ready before
         returning the cluster.
         """
-        return self.wait_for_kubernetes_cluster_nodes_status(id, "Ready", interval)
+        return self.wait_for_kubernetes_cluster_nodes_status(
+            cluster_id, "Ready", interval
+        )
 
     @keyword
     def wait_for_kubernetes_cluster_status(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         target_status: str,
         interval: int = 15,
     ) -> dict[str, t.Any]:
@@ -348,7 +355,7 @@ class KubernetesClusterKeywords:
         """
         return util.wait_for_resource_property(
             self._resource,
-            id,
+            cluster_id,
             "status",
             target_status,
             {"Pending", "Reconciling", "Upgrading", "Deleting", "Unhealthy", "Unknown"},
@@ -359,13 +366,13 @@ class KubernetesClusterKeywords:
     @keyword
     def wait_for_kubernetes_cluster_ready(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         interval: int = 15,
     ) -> dict[str, t.Any]:
         """
         Waits for the cluster status to be ready before returning it.
         """
-        return self.wait_for_kubernetes_cluster_status(id, "Ready", interval)
+        return self.wait_for_kubernetes_cluster_status(cluster_id, "Ready", interval)
 
     @keyword
     def get_kubernetes_cluster_service_url(
@@ -374,12 +381,12 @@ class KubernetesClusterKeywords:
         """
         Returns the Zenith FQDN for the specified cluster service.
         """
-        return self.wait_for_kubernetes_cluster_service_url(cluster["id"], name)
+        return self.wait_for_kubernetes_cluster_service_url(cluster["cluster_id"], name)
 
     @keyword
     def wait_for_kubernetes_cluster_service_url(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         name: str,
         interval: int = 15,
     ) -> str:
@@ -397,15 +404,15 @@ class KubernetesClusterKeywords:
             names.add("monitoring-system-kube-prometheus-stack-client")
         cluster = util.wait_for_resource(
             self._resource,
-            id,
+            cluster_id,
             lambda cluster: any(s["name"] in names for s in cluster["services"]),
             interval,
         )
         return next(s["fqdn"] for s in cluster["services"] if s["name"] in names)
 
     @contextlib.contextmanager
-    def _kubeconfig_for_cluster(self, id: str):  # noqa: A002
-        kubeconfig = self.get_kubeconfig_for_kubernetes_cluster(id)
+    def _kubeconfig_for_cluster(self, cluster_id: str):
+        kubeconfig = self.get_kubeconfig_for_kubernetes_cluster(cluster_id)
         with tempfile.NamedTemporaryFile("w") as file:
             file.write(kubeconfig)
             file.flush()
@@ -421,7 +428,7 @@ class KubernetesClusterKeywords:
     @keyword
     def run_sonobuoy_for_kubernetes_cluster(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         *,
         executable="sonobuoy",
         mode: SonobuoyMode = SonobuoyMode.QUICK,
@@ -432,7 +439,7 @@ class KubernetesClusterKeywords:
         """
         Runs Sonobuoy conformance tests for the specified cluster.
         """
-        with self._kubeconfig_for_cluster(id) as kubeconfig:
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
             run_proc = self._run_sonobuoy_cmd(
                 executable,
                 "run",
@@ -529,7 +536,8 @@ class KubernetesClusterKeywords:
                 except OSError:
                     if time.monotonic() >= deadline:
                         raise RuntimeError(
-                            f"Port {local_port} did not become available within 30s"
+                            f"Port {local_port} cluster_id not become available "
+                            "within 30s"
                         )
                     time.sleep(0.5)
             yield f"http://localhost:{local_port}"
@@ -540,7 +548,7 @@ class KubernetesClusterKeywords:
     @keyword
     def query_loki_logs_for_kubernetes_cluster(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         *,
         executable="logcli",
         query='{job=~".+"}',
@@ -559,7 +567,7 @@ class KubernetesClusterKeywords:
 
         Returns the path to the created tar.gz file.
         """
-        with self._kubeconfig_for_cluster(id) as kubeconfig:
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
             with self._port_forward_loki(
                 kubeconfig,
                 local_port=loki_port,
@@ -591,7 +599,7 @@ class KubernetesClusterKeywords:
     @keyword
     def get_pod_events_for_kubernetes_cluster(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         *,
         output_path="pod_events.json",
     ):
@@ -603,7 +611,7 @@ class KubernetesClusterKeywords:
 
         Returns the path to the created JSON file.
         """
-        with self._kubeconfig_for_cluster(id) as kubeconfig:
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
             proc = subprocess.run(
                 [
                     "kubectl",
@@ -636,7 +644,7 @@ class KubernetesClusterKeywords:
     @keyword
     def get_nodes_for_kubernetes_cluster(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         *,
         output_path="node_status.json",
     ):
@@ -648,7 +656,7 @@ class KubernetesClusterKeywords:
 
         Returns the path to the created JSON file.
         """
-        with self._kubeconfig_for_cluster(id) as kubeconfig:
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
             proc = subprocess.run(
                 [
                     "kubectl",
@@ -676,9 +684,59 @@ class KubernetesClusterKeywords:
         return output_path
 
     @keyword
+    def get_loadbalancer_ip_address(
+        self,
+        cluster_id: str,
+        namespace: str,
+        service_name: str,
+    ) -> str:
+        """
+        Get the external IP address assigned to the named load balancer.
+        Will give up after 100 seconds and raise ValueError.
+        """
+        iterations = 0
+        while iterations < 20:
+            try:
+                with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
+                    proc = subprocess.run(
+                        [
+                            "kubectl",
+                            "--kubeconfig",
+                            kubeconfig,
+                            "-n",
+                            namespace,
+                            "get",
+                            "service",
+                            service_name,
+                            "-o",
+                            "json",
+                        ],
+                        capture_output=True,
+                    )
+                if proc.returncode != 0:
+                    logger.info("kubectl get service command failed")
+                    logger.info(proc.stderr)
+                assert proc.returncode == 0, "kubectl get service command failed"
+                logger.info(proc.stdout)
+                output = proc.stdout
+                if isinstance(output, bytes):
+                    output = output.decode()
+                data = json.loads(output)
+                ingresses = data["status"]["loadBalancer"]["ingress"]
+                ip_address = ingresses[0]["ip"]
+                return ip_address
+            except KeyError:
+                pass
+            time.sleep(5)
+            iterations += 1
+        raise ValueError(
+            f"Cannot get ip address for LoadBalancer {service_name} in {namespace}"
+        )
+
+    @keyword
     def get_helm_releases_for_kubernetes_cluster(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         *,
         output_path="helm_releases.json",
     ):
@@ -700,7 +758,7 @@ class KubernetesClusterKeywords:
         if helm_version >= Version("4.0.0"):
             helm_list_all_namespaces_arg = "-A"
 
-        with self._kubeconfig_for_cluster(id) as kubeconfig:
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
             proc = subprocess.run(
                 [
                     "helm",
@@ -730,14 +788,14 @@ class KubernetesClusterKeywords:
     @keyword
     def get_console_logs_for_kubernetes_cluster_nodes(
         self,
-        id: str,  # noqa: A002
+        cluster_id: str,
         output_prefix="console-logs",
     ):
         """
         Retrieves console logs for all openstack nodes in the cluster and
         saves the output as a text file.
         """
-        cluster = self.fetch_kubernetes_cluster_by_id(id)
+        cluster = self.fetch_kubernetes_cluster_by_cluster_id(cluster_id)
         nodes = getattr(cluster, "nodes")
 
         for node_name in [node["name"] for node in nodes]:
@@ -751,3 +809,104 @@ class KubernetesClusterKeywords:
                 logger.warn(
                     f"Could not retrieve logs for {node_name}, no server exists"
                 )
+
+    @keyword
+    def enable_traefik_healthcheck(self, cluster_id: str, namespace: str, release_name: str):
+        """
+        Modify the traefik release to enable and expose the healthcheck endpoint.
+        """
+        helm_version_out = subprocess.run(
+            ["helm", "version", "--short"], capture_output=True
+        )
+        helm_version = Version(helm_version_out.stdout.decode("utf-8"))
+        logger.debug(f"Detected Helm version: {helm_version}")
+
+        subprocess.run(
+            ["helm", "repo", "add", "traefik", "https://traefik.github.io/charts"]
+        )
+        logger.debug("Traefik repo added")
+
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "helm",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "-n",
+                    namespace,
+                    "get",
+                    "metadata",
+                    release_name,
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("helm metadata command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "helm metadata command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        chart_version = data["version"]
+
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "helm",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "-n",
+                    namespace,
+                    "upgrade",
+                    release_name,
+                    "traefik/traefik",
+                    "--version",
+                    chart_version,
+                    "--reuse-values",
+                    "--set",
+                    "ingressRoute.healthcheck.enabled=true",
+                    "--set",
+                    "ingressRoute.healthcheck.entryPoints={traefik,web}",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("helm upgrade command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "helm upgrade command failed"
+        logger.info(proc.stdout)
+
+    @keyword
+    def check_traefik_ingress_route(self, external_ip):
+        """
+        Checks the liveness and readiness of a Traefik healthcheck endpoint exposed
+        by an IngressRoute to a Kubernetes LoadBalancer.
+        Will give up after 100 seconds.
+        """
+        healthcheck_url = f"http://{external_ip}/ping"
+        logger.info(f"Checking ingress controller at {healthcheck_url}")
+        # Wait for the healthcheck URL to return a 200
+        iterations = 0
+        while iterations < 20:
+            try:
+                response = httpx.get(
+                    healthcheck_url,
+                    follow_redirects=True,
+                )
+            except httpx.TransportError:
+                # We want to retry these exceptions
+                pass
+            else:
+                if response.status_code == 200:
+                    # It works - we can exit!
+                    return
+                elif response.status_code not in [404, 500, 502, 503, 504]:
+                    # Not an error we expect to see during traefik startup
+                    response.raise_for_status()
+            time.sleep(5)
+            iterations += 1
+        assert False, "Traefik ingress did not return 200"
