@@ -1,6 +1,7 @@
 import contextlib
 import dataclasses
 import enum
+import httpx
 import io
 import json
 import os
@@ -676,6 +677,56 @@ class KubernetesClusterKeywords:
         return output_path
 
     @keyword
+    def get_loadbalancer_ip_address(
+        self,
+        id: str,  # noqa: A002
+        namespace: str,
+        service_name: str
+    ) -> str:
+        """
+        Get the external IP address assigned to the named load balancer.
+        Will give up after 100 seconds and raise ValueError.
+        """
+        iterations = 0
+        while iterations < 20:
+            try:
+                with self._kubeconfig_for_cluster(id) as kubeconfig:
+                    proc = subprocess.run(
+                        [
+                            "kubectl",
+                            "--kubeconfig",
+                            kubeconfig,
+                            "-n",
+                            namespace,
+                            "get",
+                            "service",
+                            service_name,
+                            "-o",
+                            "json",
+                        ],
+                        capture_output=True,
+                    )
+                if proc.returncode != 0:
+                    logger.info("kubectl get service command failed")
+                    logger.info(proc.stderr)
+                assert proc.returncode == 0, "kubectl get service command failed"
+                logger.info(proc.stdout)
+                output = proc.stdout
+                if isinstance(output, bytes):
+                    output = output.decode()
+                data = json.loads(output)
+                ingresses = data["status"]["loadBalancer"]["ingress"]
+                ip_address = ingresses[0]["ip"]
+                return ip_address
+            except KeyError:
+                pass
+            time.sleep(5)
+            iterations += 1
+        raise ValueError(
+            f"Cannot get ip address for LoadBalancer {service_name} in {namespace}"
+        )
+
+    @keyword
     def get_helm_releases_for_kubernetes_cluster(
         self,
         id: str,  # noqa: A002
@@ -751,3 +802,106 @@ class KubernetesClusterKeywords:
                 logger.warn(
                     f"Could not retrieve logs for {node_name}, no server exists"
                 )
+
+    @keyword
+    def enable_traefik_healthcheck(
+        self, cluster_id: str, namespace: str, release_name: str
+    ):
+        """
+        Modify the traefik release to enable and expose the healthcheck endpoint.
+        """
+        helm_version_out = subprocess.run(
+            ["helm", "version", "--short"], capture_output=True
+        )
+        helm_version = Version(helm_version_out.stdout.decode("utf-8"))
+        logger.debug(f"Detected Helm version: {helm_version}")
+
+        subprocess.run(
+            ["helm", "repo", "add", "traefik", "https://traefik.github.io/charts"]
+        )
+        logger.debug(f"Traefik repo added")
+
+        with self._kubeconfig_for_cluster(id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "helm",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "-n",
+                    namespace,
+                    "get",
+                    "metadata",
+                    release_name,
+                    "-o",
+                    "json",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("helm metadata command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "helm metadata command failed"
+        logger.info(proc.stdout)
+        output = proc.stdout
+        if isinstance(output, bytes):
+            output = output.decode()
+        data = json.loads(output)
+        chart_version = data["version"]
+
+        with self._kubeconfig_for_cluster(cluster_id) as kubeconfig:
+            proc = subprocess.run(
+                [
+                    "helm",
+                    "--kubeconfig",
+                    kubeconfig,
+                    "-n",
+                    namespace,
+                    "upgrade",
+                    release_name,
+                    "traefik/traefik",
+                    "--version",
+                    chart_version,
+                    "--reuse-values",
+                    "--set",
+                    "ingressRoute.healthcheck.enabled=true",
+                    "--set",
+                    "ingressRoute.healthcheck.entryPoints={traefik,web}",
+                ],
+                capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.info("helm upgrade command failed")
+            logger.info(proc.stderr)
+        assert proc.returncode == 0, "helm upgrade command failed"
+        logger.info(proc.stdout)
+
+    @keyword
+    def check_traefik_ingress_route(self, external_ip):
+        """
+        Checks the liveness and readiness of a Traefik healthcheck endpoint exposed
+        by an IngressRoute to a Kubernetes LoadBalancer.
+        Will give up after 100 seconds.
+        """
+        healthcheck_url = f"http://{external_ip}/ping"
+        logger.info(f"Checking ingress controller at {healthcheck_url}")
+        # Wait for the healthcheck URL to return a 200
+        iterations = 0
+        while iterations < 20:
+            try:
+                response = httpx.get(
+                    healthcheck_url,
+                    follow_redirects=True,
+                )
+            except httpx.TransportError:
+                # We want to retry these exceptions
+                pass
+            else:
+                if response.status_code == 200:
+                    # It works - we can exit!
+                    return
+                elif response.status_code not in [404, 500, 502, 503, 504]:
+                    # Not an error we expect to see during traefik startup
+                    response.raise_for_status()
+            time.sleep(5)
+            iterations += 1
+        assert False, "Traefik ingress did not return 200"
