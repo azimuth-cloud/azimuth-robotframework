@@ -10,12 +10,12 @@ license = "Apache-2.0"
 dependencies = [
     "azimuth-sdk>=0.2.0",
     "easysemver>=0.2.0",
-    "httpx",
-    "jsonschema-default",
-    "openstacksdk",
-    "robotframework",
-    "robotframework-pythonlibcore",
-    "selenium",
+    "httpx>=0.28.1",
+    "jsonschema-default>=1.8.1",
+    "openstacksdk>=4.13.0",
+    "robotframework>=7.5.1",
+    "robotframework-pythonlibcore>=4.6.0",
+    "selenium>=4.52.0",
 ]
 
 [project.urls]
@@ -23,20 +23,19 @@ Repository = "https://github.com/azimuth-cloud/azimuth-robotframework"
 
 [dependency-groups]
 dev = [
-    "codespell",
-    "coverage!=4.4",
+    "codespell>=2.4.3",
+    "coverage>=7.16.2",
     "diff-cover>=10.6.0",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
-    "ruff~=0.11.11",
-    "stestr>=4.2.0",
-    "tox",
-    "tox-uv",
+    "ruff>=0.17.5",
+    "stestr>=4.2.1",
+    "tox>=4.65.0",
+    "tox-uv>=1.36.1",
     "types-pyyaml>=6.0.12.20261113",
     "types-setuptools>=84.2.0.20261104",
 ]
-
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
