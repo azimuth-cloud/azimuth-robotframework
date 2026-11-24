@@ -1,7 +1,6 @@
 __pycache__
 *.pyc
 *.egg-info
-.python-version
 clouds.yaml
 *.log
 *.html
@@ -11,7 +10,9 @@ build
 # Coverage reports/ unit tests
 cover/
 .coverage*
+diff-cover.md
 !.coveragerc
 .tox
 .stestr
 .venv
+.ruff_cache/

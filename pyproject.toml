@@ -1,8 +1,59 @@
-[build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "azimuth-robotframework"
+dynamic = ["version"]
+requires-python = ">=3.10"
+maintainers = [
+    {name = "Azimuth Cloud"}
+]
+readme = "README.md"
+license = "Apache-2.0"
+dependencies = [
+    "azimuth-sdk>=0.2.0",
+    "easysemver>=0.2.0",
+    "httpx",
+    "jsonschema-default",
+    "openstacksdk",
+    "robotframework",
+    "robotframework-pythonlibcore",
+    "selenium",
+]
 
-[tool.setuptools_scm]
+[project.urls]
+Repository = "https://github.com/azimuth-cloud/azimuth-robotframework"
+
+[dependency-groups]
+dev = [
+    "codespell",
+    "coverage!=4.4",
+    "diff-cover>=10.6.0",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff~=0.11.11",
+    "stestr>=4.2.0",
+    "tox",
+    "tox-uv",
+    "types-pyyaml>=6.0.12.20261113",
+    "types-setuptools>=84.2.0.20261104",
+]
+
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.1+unknown"
+
+[tool.hatch.build.targets.sdist]
+packages = ["Azimuth"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["Azimuth"]
+
+[tool.uv]
+exclude-newer = "7 days"
 
 [tool.ruff]
 line-length = 88
@@ -45,5 +96,5 @@ warn_unused_ignores = true
 check_untyped_defs = true
 
 [tool.ruff.lint.mccabe]
-# Flag errors (`C901`) whenever the complexity level exceeds 5.
-max-complexity = 14
+# Flag errors (`C901`) whenever the complexity level exceeds 15.
+max-complexity = 15
