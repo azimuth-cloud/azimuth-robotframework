@@ -16,3 +16,5 @@ diff-cover.md
 .stestr
 .venv
 .ruff_cache/
+.uv-refresh-backup/
+.uv-refresh-tmp-*/
