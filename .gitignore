@@ -8,13 +8,14 @@ clouds.yaml
 build
 
 # Coverage reports/ unit tests
-cover/
 .coverage*
+coverage.xml
 diff-cover.md
 !.coveragerc
 .tox
-.stestr
 .venv
 .ruff_cache/
+.mypy_cache/
+.pytest_cache/
 .uv-refresh-backup/
 .uv-refresh-tmp-*/
