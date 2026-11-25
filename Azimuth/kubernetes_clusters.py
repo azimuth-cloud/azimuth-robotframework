@@ -381,7 +381,7 @@ class KubernetesClusterKeywords:
         """
         Returns the Zenith FQDN for the specified cluster service.
         """
-        return self.wait_for_kubernetes_cluster_service_url(cluster["cluster_id"], name)
+        return self.wait_for_kubernetes_cluster_service_url(cluster["id"], name)
 
     @keyword
     def wait_for_kubernetes_cluster_service_url(
