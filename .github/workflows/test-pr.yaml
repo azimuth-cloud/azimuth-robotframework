@@ -10,8 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run the unit tests on every PR, even from external repos
+  # Run the unit tests on every PR, even from external repos.
   unit_tests:
     uses: ./.github/workflows/tox.yaml
-    with:
-      ref: ${{ github.event.pull_request.head.sha }}
